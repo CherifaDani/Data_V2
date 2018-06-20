@@ -1,104 +1,67 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
 
-# C extensions
-*.so
+# Folder config file
+Desktop.ini
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+# Python compiled files
+*.pyc
+*.prefs
 
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+# Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
+# Windows shortcuts
+*.lnk
 
-# Translations
-*.mo
-*.pot
+# .idea project files
+*.idea
 
-# Django stuff:
+# csv file
+*.csv
+
+# Logger files
 *.log
-local_settings.py
-db.sqlite3
 
-# Flask stuff:
-instance/
-.webassets-cache
+# =========================
+# Operating System Files
+# =========================
 
-# Scrapy stuff:
-.scrapy
+# OSX
+# =========================
 
-# Sphinx documentation
-docs/_build/
+.DS_Store
+.AppleDouble
+.LSOverride
 
-# PyBuilder
-target/
+# Thumbnails
+._*
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Files that might appear on external disk
+.Spotlight-V100
+.Trashes
 
-# pyenv
-.python-version
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
 
-# celery beat schedule file
-celerybeat-schedule
+.settings/org.eclipse.core.resources.prefs
+*.prefs
+*.txt
 
-# SageMath parsed files
-*.sage.py
+# derivation script
+*.xlsx
 
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
+# json files
+*.json
+.*
