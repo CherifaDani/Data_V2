@@ -96,11 +96,22 @@ class Variable(object):
                 Maximum Consecutive Constant Values
 
 
-     : {Int type}
+    mcmv_val : {Int type}
                 Maximum Consecutive missing Values
 
     last_update : {Date type}
-                    The last date when the variable was updated
+                  The date when the variable was last updated
+
+    refdate : {Date type}
+               The date to update the primary variable,
+               if not specified, refdate is today date
+
+    depth_control : {Int type}
+                    Control the base from a given threshold (n last rows)
+
+    freq : {Char type}
+            The frequency of the Series, it can be: 'D' for Daily,
+            'M': Monthly, 'Q': Quarter
 
     Return
     ------
