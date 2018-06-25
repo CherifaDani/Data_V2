@@ -632,7 +632,7 @@ def write_zip(path):
     ------
     None
    """
-    file_name, extension = splitext(path)
+    file_name = splitext(path)[0]
     nfile = basename(path)
     zip_name = '{}{}'.format(file_name, '.zip')
     zf = zipfile.ZipFile(zip_name, mode='w')
