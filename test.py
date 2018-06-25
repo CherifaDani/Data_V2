@@ -24,7 +24,7 @@ from xlrd import XLRDError
 #sys.path.append(r'/home/cluster')
 
 script_path = 'deriv_script.xlsx'
-var_name = 'FI_SWAP_EUR_1Y_LAST'
+var_name = 'Corr_CDS_GER_5Y-Gold'
 state_path = 'variable_state.csv'
 
 b = Variable(script_path=script_path, state_path = state_path,
