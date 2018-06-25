@@ -268,7 +268,6 @@ def check_mccv(df, max_ccv):
         i += 1
     return c_message, alert_level
 
-
 def check_fill_rate(df, freq):
     """
     Function computing the fill_rate of a DF from its first provided date
@@ -297,7 +296,7 @@ def check_fill_rate(df, freq):
 
     c_message = 'OK'
     alert_level = 0
-
+    df = df.dropna()
     ts_init = df.index[-1]
     # Retrieving the first Timestamp date
     ts_date = df.index[0]
@@ -306,10 +305,20 @@ def check_fill_rate(df, freq):
     # Evaluating the fill rate
     ts_fill_rate = 1.0 * df.shape[0] / len(ts_range)
     if ts_fill_rate <= 0.9:
-        print "[INFO] Fill rate = {}".format(ts_fill_rate)
+        logger.info('Fill rate = {}'.format(ts_fill_rate))
         c_message = 'low fill rate <= {} % !'.format(ts_fill_rate)
         alert_level = 1
+    if ts_fill_rate > 1.0:
+        freq = 'D'
+        # Retrieving the first Timestamp date
+        ts_date = df.index[0]
+        # Computing the range (in working days), between the two dates
+        ts_range = pd.bdate_range(ts_date, ts_init, freq=freq)
+        # Evaluating the fill rate
+        ts_fill_rate = 1.0 * df.shape[0] / len(ts_range)
+
     return c_message, alert_level, ts_fill_rate
+
 
 
 def check_gaps(df, freq):
@@ -503,3 +512,13 @@ def control_routine(df, df_latest, var_dict):
 
     return df, df_info_dict
 
+
+def clean_rows_df(df):
+    """
+    Function removing rows from a DataFrame which all values are NaN's
+    :param df: Input DataFrame (type: pandas DataFrame)
+    :return:
+        - dff : filtered DataFrame (type: pandas DataFrame)
+    """
+    dff = df.dropna(how='any', axis=0)
+    return dff
