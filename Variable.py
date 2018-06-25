@@ -158,6 +158,7 @@ class Variable(object):
     def get_var_state(self):
         var_name = self.get_param('var_name')
         state_path = self.get_param('state_path')
+        print state_path
         [var_type, last_update, backup, depth_control, refdate] = data_utils.get_var_state(
                                                 state_path, var_name)
         self.set_params(var_type=var_type)
@@ -394,7 +395,7 @@ class Variable(object):
         refdate = self.get_param('refdate')
         depth_control = self.get_param('depth_control')
         last_update = self.get_param('last_update')
-
+        state_path = self.get_param('state_path')
         # Retrieving the parents of the variable
         len_parents = len(parents)
         if len_parents != 0:
@@ -407,7 +408,8 @@ class Variable(object):
                                backup=backup,
                                refdate=refdate,
                                depth_control=depth_control,
-                               last_update=last_update
+                               last_update=last_update,
+                               state_path=state_path
                                )
                 # Updating the current variable
                 var.update()
