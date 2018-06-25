@@ -820,53 +820,53 @@ def fill_dict_from_df(dfs, variable_name):
 
         # Category
         cat_name = sel_row['Rubrique'].values
-        cat_name = cat_name[0].encode('utf-8') if cat_name.size != 0 and not pd.isnull(cat_name)else ''
+        cat_name = check_cell(cat_name)
         test_cell(cat_name, 'str','Rubrique')
 
         # SQL Name
         sql_name = sel_row['SQL_Name'].values
-        sql_name = sql_name[0].encode('utf-8') if sql_name.size != 0 else ''
+        sql_name = check_cell(sql_name)
         test_cell(sql_name, 'str', 'sql_name')
         
         # Frequency
         freq = sel_row['Frequence'].values
-        freq = freq[0].encode('utf-8') if freq.size != 0 and not pd.isnull(freq) else ''
+        freq = check_cell(freq)
         test_cell(freq, 'str', 'Frequence')
 
         # Country
         country = sel_row['benchmark_country'].values
-        country = country[0].encode('utf-8') if country.size != 0 and not pd.isnull(country) else ''
+        country = check_cell(country)
         test_cell(country, 'str', msg='benchmark_country')
         
         # Minimum Value
         min_val = sel_row['Minimum Value'].values
-        min_val = np.float(min_val[0]) if min_val.size != 0 and not pd.isnull(min_val) else ''
+        min_val = check_cell(min_val)
         test_cell(min_val, 'float', 'Minimum Value')
         
         # Maximum Value
         max_val = sel_row['Maximum value'].values
-        max_val = np.float(max_val[0]) if max_val.size != 0 and not pd.isnull(max_val) else ''
+        max_val = check_cell(max_val)
         test_cell(max_val, 'float', 'Maximum Value')
 
 
         # Maximum Absolute Change
         mac_val = sel_row['maximum absolute change'].values
-        mac_val = np.float(mac_val[0]) if mac_val.size != 0 and not pd.isnull(mac_val) else ''
+        mac_val = check_cell(mac_val)
         test_cell(mac_val, 'float', 'maximum absolute change')
 
         # Maximum Consecutive Missing Values
         mcmv_val = sel_row['Max consecutive missing values'].values
-        mcmv_val = np.int(mcmv_val[0]) if mcmv_val.size != 0 and not pd.isnull(mcmv_val) else ''
+        mcmv_val = check_cell(mcmv_val)
         test_cell(mcmv_val, 'int', 'Max consecutive missing values')
 
         # Maximum Consecutive Constant Values
         mccv_val = sel_row['Max consecutive constant values'].values
-        mccv_val = np.int(mccv_val[0]) if mccv_val.size != 0 and not pd.isnull(mccv_val) else ''
+        mccv_val = check_cell(mccv_val)
         test_cell(mccv_val, 'int', 'Max consecutive constant values')
 
         # Path
         path = sel_row['Path'].values
-        path = path[0].encode("utf-8") if path.size != 0 and not pd.isnull(path) else ''
+        path = check_cell(path)
         test_cell(path, 'str', 'Path')
 
         # Parents
