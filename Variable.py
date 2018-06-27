@@ -29,6 +29,13 @@ except ImportError:
     raise ImportError("Don't find the package control_utils")
 
 try:
+    import derivation_calculs as dcalc
+    from derivation_calculs import ope_dict
+except ImportError:
+    print ("Don't find the package derivation_calculs")
+    raise ImportError("Don't find the package derivation_calculs")
+
+try:
     from var_logger import setup_logging
 except ImportError:
     print ("Don't find the package var_logger")
@@ -158,7 +165,6 @@ class Variable(object):
     def get_var_state(self):
         var_name = self.get_param('var_name')
         state_path = self.get_param('state_path')
-        print state_path
         [var_type, last_update, backup, depth_control, refdate] = data_utils.get_var_state(
                                                 state_path, var_name)
         self.set_params(var_type=var_type)
@@ -225,6 +231,7 @@ class Variable(object):
         mccv_val = var_dict['mccv_val']
         parents = var_dict['parents']
         derived_params = var_dict['parameters']
+        operation = var_dict['operation']
 
         # initializing the attributes of the var
 
@@ -240,7 +247,8 @@ class Variable(object):
         self.set_params(mccv_val=mccv_val)
         self.set_params(parents=parents)
         self.set_params(derived_params=derived_params)
-
+        self.set_params(operation=operation)
+        self.set_params(ope_dict=ope_dict)
         logger.debug('Dictionary for {} is {} in {}'.format(
                      self.var_name, var_dict, __name__))
 
@@ -377,9 +385,14 @@ class Variable(object):
             return df
 
     def test(self):
-        self.get_var_state()
-        self.write_dict()
-        return self.__dict__
+        path = self.get_param('path')
+        freq = self.get_param('freq')
+        operation = self.get_param('operation')
+        derived_params = self.get_param('derived_params')
+        ope_dict = self.ope_dict
+        df = self.read_var(path)
+        dfcalc = dcalc.apply_operation(df, freq, operation, derived_params, ope_dict)
+        return dfcalc.head(5)
 
     def update_deriv(self):
         """
@@ -389,30 +402,39 @@ class Variable(object):
         # Variable attributes
         parents = self.get_param('parents')
         var_name = self.get_param('var_name')
-        var_type = self.get_param('var_type')
         script_path = self.get_param('script_path')
-        backup = self.get_param('backup')
-        refdate = self.get_param('refdate')
-        depth_control = self.get_param('depth_control')
-        last_update = self.get_param('last_update')
         state_path = self.get_param('state_path')
         # Retrieving the parents of the variable
         len_parents = len(parents)
+        df_calc = pd.DataFrame()
         if len_parents != 0:
             for p in range(len_parents):
                 logger.info('Direct parents of : {} are: {}'.
                             format(var_name, parents))
                 logger.info('Processing parent {}'.format(parents[p]))
-                var = Variable(var_name=parents[p], var_type=var_type,
+                var = Variable(var_name=parents[p],
                                script_path=script_path,
-                               backup=backup,
-                               refdate=refdate,
-                               depth_control=depth_control,
-                               last_update=last_update,
                                state_path=state_path
                                )
+
                 # Updating the current variable
+                 var.write_dict()
+                path = var.get_param('path')
+                freq = var.get_param('freq')
+                operation = self.get_param('operation')
+                derived_params = self.get_param('derived_params')
+                ope_dict = self.ope_dict
+                df = var.read_var(path)
+                df_calc = dcalc.apply_operation(df, freq, operation,
+                                                derived_params, ope_dict)
+               #var.update_secondary()
+
                 var.update()
+
+                # save to csv
+                # df_calc.to_csv(self.get_param('path'))
+                # df_calc.to_csv('1.csv')
+                return df_calc
 
     def update(self):
         """
@@ -432,4 +454,16 @@ class Variable(object):
             logger.debug('Meta-data Dictionary saved: {}'.format(saved_dict))
             return df
         else:
-            self.update_deriv()
+            df = self.update_deriv()
+            return df
+
+    def update_secondary(self):
+                var.write_dict()
+                path = var.get_param('path')
+                freq = var.get_param('freq')
+                operation = self.get_param('operation')
+                derived_params = self.get_param('derived_params')
+                ope_dict = self.ope_dict
+                df = var.read_var(path)
+                df_calc = dcalc.apply_operation(df, freq, operation,
+                                                derived_params, ope_dict)
