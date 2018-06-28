@@ -3,7 +3,7 @@ from __future__ import division
 import pandas as pd
 import numpy as np
 import data_utils
-import Variable
+
 ope_dict = {  # combinaison de deux séries
             'combi': {'shift': 0, 'lag1': 0, 'freq': 'B', 'col1': 0,
                       'coeff1': 1, 'lag2': 0, 'col2': 1, 'coeff2': 0,
@@ -113,19 +113,29 @@ def apply_operation(var_list, freq, operation, parameters, ope_dict):
     if operation == 'timeshift':
         shift = operation_dict['shift']
         mult = operation_dict['mult']
-        f = lambda x: (x.read_var(x.get_param('path')))
-        dfs = map(f, var_list)
+        # f = lambda x: (x.read_var(x.get_param('path')))
+        # f = lambda x: read_df(x)
+        # dfs = map(f, var_list)
+        dfs = map(lambda x: read_df(x), var_list)
         fdf = []
-        for counter, df in enumerate(dfs):
+        for _, df in enumerate(dfs):
             df_calc = apply_timeshift(df, shift, freq, mult)
             fdf.append(df_calc)
         return fdf
-        # return df_calc
-        #===========================================================================
-        # if operation == 'delta_acorr':
-        #     # df_calc = apply_corr(df)
-        #     df_calc = map(lambda x, y: x*y, var_list)
-        #===========================================================================
+
+    if operation == 'corr':
+        # df_calc = apply_corr(df)
+        dfs = map(lambda x: read_df(x), var_list)
+        fdf = []
+        for _, df in enumerate(dfs):
+            df_calc = df * 100000000000
+            fdf.append(df_calc)
+        return fdf
+        #===================================================================
+            # f = lambda x, y: (x.read_var(x.get_param('path')) * )
+            # dfs = map(f, var_list)
+            # df_calc = map(lambda x, y: x*y, var_list)
+            #===================================================================
 
 
 def apply_timeshift(df, shift, freq, mult):
@@ -145,6 +155,9 @@ def apply_timeshift(df, shift, freq, mult):
         ndf = ndf * mult
         return ndf
 
+
+def read_df(x):
+    return x.read_var(x.get_param('path'))
 
 def apply_corr(df,  period=1, span=20, exponential=True, inpct=True, lag=0):
     '''Renvoie la série des corrélations entre deux colonnes d'un Dataset

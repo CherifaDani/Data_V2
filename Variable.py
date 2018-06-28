@@ -45,7 +45,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 logger.debug('Logger for class ')
 # Setting the DEBUG level of the logger
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 class Variable(object):
@@ -420,8 +420,9 @@ class Variable(object):
                                script_path=script_path,
                                state_path=state_path
                                )
+                var.write_dict()
                 var_list.append(var)
-
+                # var.update()
                 # var.write_dict()
 
                 #df = var.read_var(path)
@@ -438,15 +439,14 @@ class Variable(object):
             #===============================================================
             # df = data_utils.load_var(path, var_name)
             #===============================================================
-            logger.warn('{}, {}'.format(var_name, operation))
+            logger.warn('var_name: {}, operation: {}'.format(var_name, operation))
             # derivation_calculs.apply_operation(df, freq, operation,
                                                     #  derived_params, ope_dict)
             # logger.warn('{} {} {}'.format(path, operation,
             #                              self.get_param('var_type')))
-            #print map(lambda x: x.deriv_var(operation, derived_params), var_list)
-            # map(lambda x: x.write_dict(), var_list)
-            print map(lambda x: x.deriv_var(var_list, operation, derived_params), var_list)
-            print map(lambda x: x.update(), var_list)
+            print self.deriv_var(var_list, operation, derived_params)
+            #print ('df_calc: {}'.format(map(lambda x: x.deriv_var(var_list, operation, derived_params), var_list)))
+            map(lambda x: x.update(), var_list)
 
                 #var.update()
                 # save to csv
@@ -479,15 +479,15 @@ class Variable(object):
             # return df
 
     def deriv_var(self, var_list, operation, derived_params):
-                self.write_dict()
-                path = self.get_param('path')
-                freq = self.get_param('freq')
-                print derivation_calculs.apply_operation(var_list, freq,
-                                                             operation,
-                                                             derived_params,
-                                                             ope_dict)
-                #===============================================================
-                # if df_calc is not None:
-                #     df_calc.to_csv(self.get_param('path') + 'copy')
-                #===============================================================
-                
+        map(lambda x: x.write_dict(), var_list)
+        freq = self.get_param('freq')
+        return derivation_calculs.apply_operation(var_list,
+                                                 freq,
+                                                 operation,
+                                                 derived_params,
+                                                 ope_dict)
+        #===============================================================
+        # if df_calc is not None:
+        #     df_calc.to_csv(self.get_param('path') + 'copy')
+        #===============================================================
+        
