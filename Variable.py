@@ -45,7 +45,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 logger.debug('Logger for class ')
 # Setting the DEBUG level of the logger
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 class Variable(object):
