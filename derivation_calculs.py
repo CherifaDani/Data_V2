@@ -3,7 +3,7 @@ from __future__ import division
 import pandas as pd
 import numpy as np
 import data_utils
-
+import Variable
 ope_dict = {  # combinaison de deux séries
             'combi': {'shift': 0, 'lag1': 0, 'freq': 'B', 'col1': 0,
                       'coeff1': 1, 'lag2': 0, 'col2': 1, 'coeff2': 0,
@@ -105,7 +105,7 @@ ope_dict = {  # combinaison de deux séries
             }
 
 
-def apply_operation(df, freq, operation, parameters, ope_dict, var_list=None):
+def apply_operation(var_list, freq, operation, parameters, ope_dict):
     operation_dict = ope_dict[operation]
 
     for key, values in parameters.items():
@@ -113,12 +113,19 @@ def apply_operation(df, freq, operation, parameters, ope_dict, var_list=None):
     if operation == 'timeshift':
         shift = operation_dict['shift']
         mult = operation_dict['mult']
-        df_calc = apply_timeshift(df, shift, freq, mult)
-        return df_calc
-    if operation == 'delta_acorr':
-        # df_calc = apply_corr(df)
-        df_calc = reduce(lambda x, y: x*y, var_list)
-        return df_calc
+        f = lambda x: (x.read_var(x.get_param('path')))
+        dfs = map(f, var_list)
+        fdf = []
+        for counter, df in enumerate(dfs):
+            df_calc = apply_timeshift(df, shift, freq, mult)
+            fdf.append(df_calc)
+        return fdf
+        # return df_calc
+        #===========================================================================
+        # if operation == 'delta_acorr':
+        #     # df_calc = apply_corr(df)
+        #     df_calc = map(lambda x, y: x*y, var_list)
+        #===========================================================================
 
 
 def apply_timeshift(df, shift, freq, mult):

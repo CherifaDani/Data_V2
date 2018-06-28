@@ -427,24 +427,26 @@ class Variable(object):
                 #df = var.read_var(path)
 
                 # Updating the current variable
-                operation = self.get_param('operation')
-                derived_params = self.get_param('derived_params')
-                #var.update_secondary(operation, derived_params)
-                #===============================================================
-                # path = var.get_param('path')
-                # freq = var.get_param('freq')
-                #===============================================================
-                var_name = self.get_param('var_name')
-                #===============================================================
-                # df = data_utils.load_var(path, var_name)
-                #===============================================================
-                logger.warn('{}, {}'.format(var_name, operation))
-                # derivation_calculs.apply_operation(df, freq, operation,
-                                                        #  derived_params, ope_dict)
-                # logger.warn('{} {} {}'.format(path, operation,
-                #                              self.get_param('var_type')))
-                #print map(lambda x: x.deriv_var(operation, derived_params), var_list)
-                print map(lambda x: x.update(), var_list)
+            operation = self.get_param('operation')
+            derived_params = self.get_param('derived_params')
+            #var.update_secondary(operation, derived_params)
+            #===============================================================
+            # path = var.get_param('path')
+            # freq = var.get_param('freq')
+            #===============================================================
+            var_name = self.get_param('var_name')
+            #===============================================================
+            # df = data_utils.load_var(path, var_name)
+            #===============================================================
+            logger.warn('{}, {}'.format(var_name, operation))
+            # derivation_calculs.apply_operation(df, freq, operation,
+                                                    #  derived_params, ope_dict)
+            # logger.warn('{} {} {}'.format(path, operation,
+            #                              self.get_param('var_type')))
+            #print map(lambda x: x.deriv_var(operation, derived_params), var_list)
+            # map(lambda x: x.write_dict(), var_list)
+            print map(lambda x: x.deriv_var(var_list, operation, derived_params), var_list)
+            print map(lambda x: x.update(), var_list)
 
                 #var.update()
                 # save to csv
@@ -476,14 +478,16 @@ class Variable(object):
 
             # return df
 
-    def deriv_var(self, operation, derived_params):
+    def deriv_var(self, var_list, operation, derived_params):
+                self.write_dict()
                 path = self.get_param('path')
                 freq = self.get_param('freq')
-                df = self.read_var(path)
-                df_calc = derivation_calculs.apply_operation(df, freq,
+                print derivation_calculs.apply_operation(var_list, freq,
                                                              operation,
                                                              derived_params,
                                                              ope_dict)
-                if df_calc is not None:
-                    df_calc.to_csv(self.get_param('path') + 'copy')
+                #===============================================================
+                # if df_calc is not None:
+                #     df_calc.to_csv(self.get_param('path') + 'copy')
+                #===============================================================
                 
