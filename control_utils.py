@@ -268,6 +268,7 @@ def check_mccv(df, max_ccv):
         i += 1
     return c_message, alert_level
 
+
 def check_fill_rate(df, freq):
     """
     Function computing the fill_rate of a DF from its first provided date
@@ -318,7 +319,6 @@ def check_fill_rate(df, freq):
         ts_fill_rate = 1.0 * df.shape[0] / len(ts_range)
 
     return c_message, alert_level, ts_fill_rate
-
 
 
 def check_gaps(df, freq):
@@ -399,6 +399,10 @@ def infer_freq(df):
     # print res
     if res.size != 0:
         freq = res.index[0]
+
+    if freq == pd.Timedelta('1 days'):
+        freq = 'B'
+
     return freq
 
 
@@ -426,7 +430,7 @@ def write_list_to_csv(flist, fname):
         # Saving the DataFrame in a csv file
         df.to_csv(fname, sep=',')
 
-        
+
 def control_routine(df, df_latest, var_dict):
     # Control routine
     clist = []  # Control messages list
