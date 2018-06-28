@@ -331,16 +331,16 @@ def load_from_dir(path, var_name, times_series):
                               index_col=0)
             if type(col) == pd.DataFrame:
                 col = col.iloc[:, 0]
-                
+
             col.name = var_name
-            
+
     return col
 
 
 def load_index(path, times_series=True):
     """
     Function used to load a index 
-        
+
     Parameters
     ----------
     path : {string type}
@@ -348,7 +348,7 @@ def load_index(path, times_series=True):
 
     times_series : {bool type}, optional, default True
                    Option to parse dates
-    
+
     Return
     ------
     index_mat : {Series type}
@@ -381,7 +381,7 @@ def apply_index(xcol, idx, idx_h=None, idx_m=None):
 
     idx : {Index type}
           the multiIndex
-    
+
     Return
     ------
     indexed_col : {Series type} 
@@ -420,7 +420,7 @@ def apply_index(xcol, idx, idx_h=None, idx_m=None):
 def take_interval(xcol, dtend=None, dtstart=None, dayfirst=True):
     """
     Function used to take an interval of xcol
-        
+
     Parameters
     ----------
     xcol : {Series type}
@@ -443,11 +443,11 @@ def take_interval(xcol, dtend=None, dtstart=None, dayfirst=True):
         first_index = xcol.index.get_level_values(0)
     else:
         first_index = xcol.index
-    
+
     if len(xcol.index) == 0:
         warnings.warn('xcol is empty')
         return xcol
-    
+
     if type(dtend) == int:
         if type(dtstart) == int:
             xcol = xcol.iloc[dtstart:dtend+1]
@@ -458,12 +458,12 @@ def take_interval(xcol, dtend=None, dtstart=None, dayfirst=True):
             dtstart = first_index[0]
         elif type(first_index[0]) == pd.tslib.Timestamp:
             dtstart = pd.to_datetime(dtstart, dayfirst=dayfirst)
-        
+
         if dtend is None or dtend == '':
             dtend = first_index[-1]
         elif type(first_index[-1]) == pd.tslib.Timestamp:
             dtend = pd.to_datetime(dtend, dayfirst=dayfirst)
-            
+
         if (dtstart <= first_index[0]) and (dtend >= first_index[-1]):
             warnings.warn('The chosen period is bigger or equal than the %s variable'
                           % xcol.name)
@@ -478,14 +478,14 @@ def take_interval(xcol, dtend=None, dtstart=None, dayfirst=True):
             else:
                 xcol = xcol.loc[xcol.index < dtend]
                 xcol = xcol.loc[xcol.index >= dtstart]
-        
+
     return xcol
 
 
 def get_variables(path, times_series=True):
     """
     Function used to get the all features
-        
+
     Parameters
     ----------
     path : {string type}
@@ -512,7 +512,7 @@ def get_variables_from_file(path, times_series):
     sep = find_delim(path)
     extension = os.path.splitext(path)[1]
     variables = []
-    
+
     # Test the type a file
     if extension == '.csv':
         var_list = pd.read_csv(path, sep=sep, index_col=0).columns
@@ -526,7 +526,7 @@ def get_variables_from_file(path, times_series):
         time_variables = [col for col in var_list if 'TIME' in col
                           and " " not in col]
         variables += time_variables
-    
+
     return variables
 
 
@@ -543,22 +543,22 @@ def get_first_date(serie):
         first_date = serie.dropna(inplace=False).index.get_level_values(0)[0]
     else:
         first_date = serie.dropna(inplace=False).index[0]
-    
+
     return first_date
 
 
 def get_nb_assets(serie):
     """
     Function used to get the number of stock
-        
+
     Parameters
     ----------
     serie : {Series type}
             Serie with a multiIndex
-    
+
     Return
     ------
-    : {int type} 
+    : {int type}
       The number of stocks
     """
     if isinstance(serie.index, pd.core.index.MultiIndex) is False:
@@ -570,15 +570,15 @@ def get_nb_assets(serie):
 def get_time_index(vect):
     """
     Function used to get the number of stock
-        
+
     Parameters
     ----------
     vect : {Series type}
             Serie with a multiIndex
-    
+
     Return
     ------
-    time_index : {index type} 
+    time_index : {index type}
                  The index of date for a multiIndex
     """
     if isinstance(vect.index, pd.core.index.MultiIndex):
@@ -601,7 +601,7 @@ def df_to_csv(df, csv_name, mode='w'):
 
     csv_name : {string type}
                  The csv_name to save
-    
+
     mode : {Char type}
             a for append, w for write
     Return
@@ -632,7 +632,7 @@ def write_zip(path):
     ------
     None
    """
-    file_name, extension = splitext(path)
+    file_name = splitext(path)[0]
     nfile = basename(path)
     zip_name = '{}{}'.format(file_name, '.zip')
     zf = zipfile.ZipFile(zip_name, mode='w')
@@ -763,7 +763,7 @@ def test_cell(cell_name, cell_type, msg=''):
                 An entry
 
     cell_type : {String type}
-                The wanted type, eg: str, time, int 
+                The wanted type, eg: str, time, int
 
     msg : {String type}
             The message to display
@@ -820,53 +820,60 @@ def fill_dict_from_df(dfs, variable_name):
 
         # Category
         cat_name = sel_row['Rubrique'].values
-        cat_name = cat_name[0].encode('utf-8') if cat_name.size != 0 and not pd.isnull(cat_name)else ''
-        test_cell(cat_name, 'str','Rubrique')
+        cat_name = check_cell(cat_name)
+        test_cell(cat_name, 'str', 'Rubrique')
+
+        # Operation
+
+        operation = sel_row['Operation'].values
+        operation = check_cell(operation)
+        test_cell(operation, 'str', 'Operation')
 
         # SQL Name
         sql_name = sel_row['SQL_Name'].values
-        sql_name = sql_name[0].encode('utf-8') if sql_name.size != 0 else ''
+        sql_name = check_cell(sql_name)
         test_cell(sql_name, 'str', 'sql_name')
-        
+
         # Frequency
         freq = sel_row['Frequence'].values
-        freq = freq[0].encode('utf-8') if freq.size != 0 and not pd.isnull(freq) else ''
+        freq = check_cell(freq)
         test_cell(freq, 'str', 'Frequence')
+        if freq == 'D':
+            freq = 'B'.encode('utf-8')
 
         # Country
         country = sel_row['benchmark_country'].values
-        country = country[0].encode('utf-8') if country.size != 0 and not pd.isnull(country) else ''
+        country = check_cell(country)
         test_cell(country, 'str', msg='benchmark_country')
-        
+
         # Minimum Value
         min_val = sel_row['Minimum Value'].values
-        min_val = np.float(min_val[0]) if min_val.size != 0 and not pd.isnull(min_val) else ''
+        min_val = check_cell(min_val)
         test_cell(min_val, 'float', 'Minimum Value')
-        
+
         # Maximum Value
         max_val = sel_row['Maximum value'].values
-        max_val = np.float(max_val[0]) if max_val.size != 0 and not pd.isnull(max_val) else ''
+        max_val = check_cell(max_val)
         test_cell(max_val, 'float', 'Maximum Value')
-
 
         # Maximum Absolute Change
         mac_val = sel_row['maximum absolute change'].values
-        mac_val = np.float(mac_val[0]) if mac_val.size != 0 and not pd.isnull(mac_val) else ''
+        mac_val = check_cell(mac_val)
         test_cell(mac_val, 'float', 'maximum absolute change')
 
         # Maximum Consecutive Missing Values
         mcmv_val = sel_row['Max consecutive missing values'].values
-        mcmv_val = np.int(mcmv_val[0]) if mcmv_val.size != 0 and not pd.isnull(mcmv_val) else ''
+        mcmv_val = check_cell(mcmv_val)
         test_cell(mcmv_val, 'int', 'Max consecutive missing values')
 
         # Maximum Consecutive Constant Values
         mccv_val = sel_row['Max consecutive constant values'].values
-        mccv_val = np.int(mccv_val[0]) if mccv_val.size != 0 and not pd.isnull(mccv_val) else ''
+        mccv_val = check_cell(mccv_val)
         test_cell(mccv_val, 'int', 'Max consecutive constant values')
 
         # Path
         path = sel_row['Path'].values
-        path = path[0].encode("utf-8") if path.size != 0 and not pd.isnull(path) else ''
+        path = check_cell(path)
         test_cell(path, 'str', 'Path')
 
         # Parents
@@ -905,7 +912,8 @@ def fill_dict_from_df(dfs, variable_name):
                    'mccv_val': mccv_val,
                    'parents': parents,
                    'parameters': parameters,
-                   'path': path
+                   'path': path,
+                   'operation': operation
                    }
         return dict_df
     else:
@@ -1032,14 +1040,14 @@ def alterfreq(freq, refdate, last_update, var_name, path):
     refdays_D = pd.Timedelta('1 days')
     refdays_Q = pd.Timedelta('92 days')
 
-    if freq not in ['D', 'M', 'Q']:
+    if freq not in ['D', 'B', 'M', 'Q']:
         df = load_var(path, var_name)
         freq = cu.infer_freq(df)
 
     if type(last_update) in [datetime, pd.Timestamp]:
         tdiff = today - last_update
         if refdate == today:
-            if freq == 'D' and tdiff < refdays_D:
+            if freq in ['D', 'B'] and tdiff < refdays_D:
                 update = False
                 logger.info('Variable not updated {}'.format(var_name))
 

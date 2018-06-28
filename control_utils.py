@@ -279,7 +279,7 @@ def check_fill_rate(df, freq):
           Input dataframe
 
     freq : {Char type}
-              The frequency of the TS, eg: 'B', 'D'
+              The frequency of the TS, default: 'B'
 
     Return
     ------
@@ -288,24 +288,36 @@ def check_fill_rate(df, freq):
 
     alert_level : {Int type}
                     The alert level of each case
-    
-    ts_fill_rate: {Float type}
+
+    ts_fill_rate : {Float type}
                     The fill rate of the time series
     """
+    if freq == pd.Timedelta('1 days'):
+        freq = 'B'
+
     c_message = 'OK'
     alert_level = 0
-    # Getting the current Timestamp
-    ts_now = pd.tslib.Timestamp.now()
+    df = df.dropna()
+    ts_init = df.index[-1]
     # Retrieving the first Timestamp date
     ts_date = df.index[0]
     # Computing the range (in working days), between the two dates
-    ts_range = pd.bdate_range(ts_date, ts_now, freq=freq)
+    ts_range = pd.bdate_range(ts_date, ts_init, freq=freq)
     # Evaluating the fill rate
     ts_fill_rate = 1.0 * df.shape[0] / len(ts_range)
     if ts_fill_rate <= 0.9:
-        logger.info("Fill rate = {}".format(ts_fill_rate))
+        logger.info('Fill rate = {}'.format(ts_fill_rate))
         c_message = 'low fill rate <= {} % !'.format(ts_fill_rate)
-        alert_level = 3
+        alert_level = 1
+    if ts_fill_rate > 1.0:
+        freq = 'D'
+        # Retrieving the first Timestamp date
+        ts_date = df.index[0]
+        # Computing the range (in working days), between the two dates
+        ts_range = pd.bdate_range(ts_date, ts_init, freq=freq)
+        # Evaluating the fill rate
+        ts_fill_rate = 1.0 * df.shape[0] / len(ts_range)
+
     return c_message, alert_level, ts_fill_rate
 
 
@@ -387,6 +399,10 @@ def infer_freq(df):
     # print res
     if res.size != 0:
         freq = res.index[0]
+
+    if freq == pd.Timedelta('1 days'):
+        freq = 'B'
+
     return freq
 
 
@@ -414,7 +430,7 @@ def write_list_to_csv(flist, fname):
         # Saving the DataFrame in a csv file
         df.to_csv(fname, sep=',')
 
-        
+
 def control_routine(df, df_latest, var_dict):
     # Control routine
     clist = []  # Control messages list
@@ -500,3 +516,13 @@ def control_routine(df, df_latest, var_dict):
 
     return df, df_info_dict
 
+
+def clean_rows_df(df):
+    """
+    Function removing rows from a DataFrame which all values are NaN's
+    :param df: Input DataFrame (type: pandas DataFrame)
+    :return:
+        - dff : filtered DataFrame (type: pandas DataFrame)
+    """
+    dff = df.dropna(how='any', axis=0)
+    return dff
