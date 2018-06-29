@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 import pandas as pd
+from data_utils import reindex
+import numpy as np
 
 
 def apply_operation(var_list, freq, operation, parameters):
@@ -13,7 +15,7 @@ def apply_operation(var_list, freq, operation, parameters):
                 A list of variables (objects)
  
     freq : {Char type}
-            The frequecy of the Series,
+            The frequency of the Series,
             default: 'B'
  
     operation : {String type}
@@ -29,23 +31,23 @@ def apply_operation(var_list, freq, operation, parameters):
             Can be none if operation not found
     """
     fdf = pd.DataFrame()
-
+    dfs = map(lambda x: read_df(x), var_list)
     if operation == 'timeshift':
-        mult = parameters['mult']
+
         # f = lambda x: (x.read_var(x.get_param('path')))
         # f = lambda x: read_df(x)
         # dfs = map(f, var_list)
-        dfs = map(lambda x: read_df(x), var_list)
+        # dfs = map(lambda x: read_df(x), var_list)
         fdf = []
+
         for _, df in enumerate(dfs):
-            df_calc = apply_timeshift(df, freq, mult)
+            df_calc = apply_timeshift(df, freq)
             fdf.append(df_calc)
- 
+
         return fdf
- 
+
     if operation == 'corr':
         # df_calc = apply_corr(df)
-        dfs = map(lambda x: read_df(x), var_list)
         fdf = dfs[0] + dfs[1]
         #=======================================================================
         # fdf = []
@@ -54,6 +56,24 @@ def apply_operation(var_list, freq, operation, parameters):
         #     fdf.append(df_calc)
         #=======================================================================
         return fdf
+
+    if operation == 'combi':
+        dfs = map(lambda x: read_df(x), var_list)
+        coeff1 = parameters['coeff1']
+        coeff2 = parameters['coeff2']
+        islinear = parameters['lin']
+        transfo = parameters['transfo'] if 'transfo' in parameters else None
+        fdf = apply_combi(dfs[0], dfs[1], coeff1, coeff2, islinear, transfo)
+        print fdf
+        return fdf
+
+
+
+
+
+    if 'mult' in parameters:
+        return fdf * parameters['mult']
+    
         #===================================================================
             # f = lambda x, y: (x.read_var(x.get_param('path')) * )
             # dfs = map(f, var_list)
@@ -61,7 +81,7 @@ def apply_operation(var_list, freq, operation, parameters):
             #===================================================================
 
 
-def apply_timeshift(df, freq, mult, shift=0):
+def apply_timeshift(df, freq, shift=0):
         """
         Renvoie une copie de l'objet courant, avec dates translatées
         d'un délai.
@@ -74,9 +94,27 @@ def apply_timeshift(df, freq, mult, shift=0):
         """
         # Shiffting with a given shift
         ndf = df.tshift(shift, freq)
-        # Multiplication by mult
-        ndf = ndf * mult
         return ndf
+
+
+def apply_combi(df1, df2, coeff1, coeff2, islinear, transfo=None):
+    dfs = pd.DataFrame()
+    dfx, dfy = reindex(df1, df2)
+    if islinear:
+        dfs = coeff1 * dfx + coeff2 * dfy
+        return dfs
+    else:
+        dfs = (coeff1 ** dfx) * (coeff2 ** dfy)
+        return dfs
+
+    #===========================================================================
+    # if transfo is not None:
+    #     if str(transfo).lower() == 'tanh':
+    #         transfo_df = np.tanh(dfs)
+    #     elif str(transfo).lower() == 'sign':
+    #         transfo_df = np.sign(dfs)
+    #===========================================================================
+       # return transfo_df
 
 
 def read_df(x):
