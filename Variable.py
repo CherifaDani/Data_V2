@@ -30,7 +30,6 @@ except ImportError:
 
 try:
     import derivation_calculs
-    from derivation_calculs import ope_dict
 except ImportError:
     print ("Don't find the package derivation_calculs")
     raise ImportError("Don't find the package derivation_calculs")
@@ -248,7 +247,7 @@ class Variable(object):
         self.set_params(parents=parents)
         self.set_params(derived_params=derived_params)
         self.set_params(operation=operation)
-        self.set_params(ope_dict=ope_dict)
+        # self.set_params(ope_dict=ope_dict)
         logger.debug('Dictionary for {} is {} in {}'.format(
                      self.var_name, var_dict, __name__))
 
@@ -460,7 +459,7 @@ class Variable(object):
         """
         var_dict = self.write_dict()
         var_name = self.get_param('var_name')
-        ope_dict = self.get_param('ope_dict')
+        # ope_dict = self.get_param('ope_dict')
 
         logger.debug('The dictionary of the variable {} is: {}'.
                      format(var_name, var_dict))
@@ -481,11 +480,11 @@ class Variable(object):
     def deriv_var(self, var_list, operation, derived_params):
         map(lambda x: x.write_dict(), var_list)
         freq = self.get_param('freq')
+
         return derivation_calculs.apply_operation(var_list,
-                                                 freq,
-                                                 operation,
-                                                 derived_params,
-                                                 ope_dict)
+                                                  freq,
+                                                  operation,
+                                                  derived_params)
         #===============================================================
         # if df_calc is not None:
         #     df_calc.to_csv(self.get_param('path') + 'copy')
