@@ -443,9 +443,10 @@ class Variable(object):
                                                     #  derived_params, ope_dict)
             # logger.warn('{} {} {}'.format(path, operation,
             #                              self.get_param('var_type')))
+            map(lambda x: x.update(), var_list)
             print self.deriv_var(var_list, operation, derived_params)
             #print ('df_calc: {}'.format(map(lambda x: x.deriv_var(var_list, operation, derived_params), var_list)))
-            map(lambda x: x.update(), var_list)
+
 
                 #var.update()
                 # save to csv
