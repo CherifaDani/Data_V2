@@ -1062,3 +1062,37 @@ def alterfreq(freq, refdate, last_update, var_name, path):
             update = True
 
     return update
+
+
+def reindex(df1, df2):
+    """
+    Function reindexing two DFs with the same index
+
+    Parameters
+    ----------
+    df1 : {Dataframe type}
+            The dataframe to re_index
+
+    df2 : {Dataframe type}
+            The dataframe to re_index
+
+    Return
+    ------
+    dfx : {Dataframe type}
+            df1 with the same index as df2
+
+    dfy : {Dataframe type}
+            df2 with the same index as df1
+    """
+    df1c = df1.copy()
+    df2c = df2.copy()
+    df1c.columns = ['VALUE']
+    df2c.columns = ['VALUE']
+    if df1c.shape[0] > df2c.shape[0]:
+        dfx = df2c.reindex_like(df1c)
+        dfy = df1c
+        return dfy, dfx
+    else:
+        dfx = df1c.reindex_like(df2c)
+        dfy = df2c
+        return dfx, dfy
