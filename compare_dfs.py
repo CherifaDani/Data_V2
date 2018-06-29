@@ -3,6 +3,7 @@
 import pandas as pd
 import numpy as np
 import logging
+from data_utils import reindex
 try:
     from var_logger import setup_logging
 except ImportError:
@@ -36,13 +37,7 @@ def compare_two_dfs(df1, df2):
     """
     df = pd.DataFrame()
     # Reindixing the DFs to have the same index
-    if df1.shape[0] > df2.shape[0]:
-        dfx = df2.reindex_like(df1)
-        dfy = df1
-    else:
-        dfx = df1.reindex_like(df2)
-        dfy = df2
-
+    dfx, dfy = reindex(df1, df2)
     if df1.equals(df2):
         # Do nothing
         logger.info('DF1 equals DF2')
