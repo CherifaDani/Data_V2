@@ -3,6 +3,7 @@ from __future__ import division
 import pandas as pd
 from data_utils import reindex
 import numpy as np
+import datetime
 
 
 def apply_operation(var_list, freq, operation, parameters):
@@ -33,13 +34,7 @@ def apply_operation(var_list, freq, operation, parameters):
     fdf = pd.DataFrame()
     dfs = map(lambda x: read_df(x), var_list)
     if operation == 'timeshift':
-
-        # f = lambda x: (x.read_var(x.get_param('path')))
-        # f = lambda x: read_df(x)
-        # dfs = map(f, var_list)
-        # dfs = map(lambda x: read_df(x), var_list)
         fdf = []
-
         for _, df in enumerate(dfs):
             df_calc = apply_timeshift(df, freq)
             fdf.append(df_calc)
@@ -49,23 +44,37 @@ def apply_operation(var_list, freq, operation, parameters):
     if operation == 'corr':
         # df_calc = apply_corr(df)
         fdf = dfs[0] + dfs[1]
-        #=======================================================================
-        # fdf = []
-        # for _, df in enumerate(dfs):
-        #     df_calc = df * 55
-        #     fdf.append(df_calc)
-        #=======================================================================
         return fdf
 
     if operation == 'combi':
-        dfs = map(lambda x: read_df(x), var_list)
+        # dfs = map(lambda x: read_df(x), var_list)
         coeff1 = parameters['coeff1']
         coeff2 = parameters['coeff2']
         islinear = parameters['lin']
         transfo = parameters['transfo'] if 'transfo' in parameters else None
         fdf = apply_combi(dfs[0], dfs[1], coeff1, coeff2, islinear, transfo)
-        print fdf
         return fdf
+
+    if operation == 'pctdelta':
+        period = parameters['period']
+        ownfreq = parameters['freq']
+        fdf = apply_pctdelta(dfs[0], period=period, freq=ownfreq)
+        return fdf
+
+    if operation == 'rollingreturn':
+        period = parameters['period']
+        rollfreq = parameters['rollfreq']
+        iweek = parameters['iweek']
+        iday = parameters['iday']
+        iroll_interval = parameters['iroll_interval']
+        fdf = apply_rolling(dfs[0], dfs[1], rollfreq, iweek, iday, iroll_interval)
+
+    if operation == 'ewma':
+        emadecay  = parameters['emadecay']
+        wres  = parameters['wres']
+        wz  = parameters['wZ']
+        fdf = apply_ewma(dfs[0], emadecay, wres, wz)
+
 
 
 
@@ -73,7 +82,10 @@ def apply_operation(var_list, freq, operation, parameters):
 
     if 'mult' in parameters:
         return fdf * parameters['mult']
-    
+    if 'lag' in parameters:
+        return apply_timeshift(fdf, freq, parameters['lag'])
+    if 'add' in parameters:
+        return fdf + parameters['add']
         #===================================================================
             # f = lambda x, y: (x.read_var(x.get_param('path')) * )
             # dfs = map(f, var_list)
@@ -102,19 +114,17 @@ def apply_combi(df1, df2, coeff1, coeff2, islinear, transfo=None):
     dfx, dfy = reindex(df1, df2)
     if islinear:
         dfs = coeff1 * dfx + coeff2 * dfy
-        return dfs
     else:
         dfs = (coeff1 ** dfx) * (coeff2 ** dfy)
-        return dfs
 
-    #===========================================================================
-    # if transfo is not None:
-    #     if str(transfo).lower() == 'tanh':
-    #         transfo_df = np.tanh(dfs)
-    #     elif str(transfo).lower() == 'sign':
-    #         transfo_df = np.sign(dfs)
-    #===========================================================================
-       # return transfo_df
+    if transfo is not None:
+        if str(transfo).lower() == 'tanh':
+            transfo_df = np.tanh(dfs)
+        elif str(transfo).lower() == 'sign':
+            transfo_df = np.sign(dfs)
+        return transfo_df
+    else:
+        return dfs
 
 
 def read_df(x):
@@ -159,13 +169,71 @@ def apply_corr(df,  period=1, span=20, exponential=True, inpct=True, lag=0):
         return corrdata
 
 
+def apply_pctdelta(df, period, freq):
+    deltadata = df.diff(period)
+    idx_all = pd.bdate_range(start=(deltadata.index[0]).date(),
+                             end=(deltadata.index[-1]).date(),
+                             freq=freq)
+
+    # Reindex using datetime index, to drop hours and minutes
+    deltadata.index = pd.DatetimeIndex(deltadata.index).normalize()
+    if(freq == 'B' or freq == 'D'):
+        deltadata = deltadata.reindex(index=idx_all, method=None)
+
+    else:
+        deltadata = deltadata.reindex(index=idx_all, method='pad')
+
+    return deltadata
 
 
+def apply_rolling(df1, df2, rollfreq, iweek, iday, iroll_interval, freq):
+    '''
+        Renvoie la série des variations d'une colonne pour un décalage donné.
+        Dans le calcul de V(t) / V(t - p), V est la série principale self [maincol].
+        Par exception, aux dates spécifiées par la règle rolldate, on calcule V(t) / Vsubst(t-p),
+        où Vsubst représente la série self [substcol] 
+        '''
+    # élargir le calendrier pour inclure les dates de rolls de façon certaine
+    idx_all = pd.bdate_range(start=(df1.index[0]).date(),
+                             end=(df1.index[-1]).date(),
+                             freq=freq)
+    df1.index = pd.DatetimeIndex(df1.index).normalize()
+    data = df1.reindex(index=idx_all, method=None)
+    rolldates = pd.bdate_range(data.index[0], data.index[-1], freq=rollfreq)
+    rolldates = rolldates + pd.datetools.WeekOfMonth(week=iweek, weekday=iday)
 
 
+def apply_ewma(df, emadecay, wres, wz):
+    '''Renvoie la série des ema d'un ensemble de colonnes pour une pseudo-durée(span) donnée.'''
+    ''' self: contient la totalité des données primaires dont on veut calculer la moyenne
+    emadecay: coefficient d'atténuation de la moyenne(proche de 1). Prioritaire si fourni.
+    span: 2/emadecay - 1
+    cols: groupe de colonnes dont on calcule l'ewma.
+    wres: si True, on calcule également le résidu
+    normalize: si True, on calcule aussi le Z-Score(résidu / ewmastd(même span))
+    histoemadata: série facultative contenant les valeurs historiques de l'ewma sur des dates
+       normalement antérieures aux données primaires.
+    overridedepth: nombre de jours passés(à partir de la donnée la plus récente) à recalculer
+    '''
+    stdev_min = 1e-5
+    rescols = pd.DataFrame()
+    zcols = pd.DataFrame()
+    # calculer la période synthétique correspondant au coeff s'il est fourni
+    if type(emadecay) in [int, float]:
+        if emadecay > 0:
+            span = (2.0 / emadecay) - 1
+    df_calc = pd.ewma(df, span=span, adjust=True)
+    # calcul du résidu
+    if wres:
+        rescols = df - df_calc
+        # calcul du ZScore
+        if wz:
+            stdevcols = pd.ewmstd(rescols, span=span)
+            stdevcols[stdevcols <= stdev_min] = np.nan
+            zcols = rescols * 0.0
+            zcols[stdevcols > 0] = rescols[stdevcols > 0] / stdevcols[stdevcols > 0]
 
-
-
+    return df, df_calc, rescols, zcols
 #===============================================================================
 # 
 # 
