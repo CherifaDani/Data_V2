@@ -486,8 +486,5 @@ class Variable(object):
                                                   freq,
                                                   operation,
                                                   derived_params)
-        #===============================================================
         # if df_calc is not None:
         #     df_calc.to_csv(self.get_param('path') + 'copy')
-        #===============================================================
-        
