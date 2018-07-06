@@ -16,7 +16,7 @@ import sys
 import warnings
 from xlrd import XLRDError
 import zipfile
-from datetime import datetime
+from datetime import datetime, date
 import numpy as np
 import pandas as pd
 from var_logger import setup_logging
@@ -268,6 +268,7 @@ def load_from_file(path):
     # Test the type a file
     if extension == '.csv':
         df = pd.read_csv(path, sep=sep, index_col=0, parse_dates=True)
+        np.around(df, 6)
         nrows = df.shape[0]
         if not df.empty and nrows > 2:
             df.index = pd.DatetimeIndex(df.index)
@@ -782,7 +783,7 @@ def test_cell(cell_name, cell_type, msg=''):
         if type(cell_name) not in [float]:
             logger.error('{} is not a float'.format(msg))
     elif cell_type == 'time':
-        if type(cell_name) not in [datetime, pd.Timestamp]:
+        if type(cell_name) not in [datetime, pd.Timestamp, date]:
             logger.error('{} is not a valid time format'.format(msg))
     else:
         logger.error('Type not found ! {}'.format(cell_type))
@@ -895,7 +896,9 @@ def fill_dict_from_df(dfs, variable_name):
 
         if len(parameters) > 0:
             parameters = sel_row['Parameters'].values[0]
+            print(parameters)
             parameters = ast.literal_eval(parameters)
+            # parameters = parameters.encode('utf-8')
             assert type(parameters) == dict, 'Parameters must be a dict'
         else:
             parameters = {}
@@ -980,7 +983,7 @@ def get_var_state(csv_file, var_name):
     # last_update
     last_update = sel_row['last_update'].values
     last_update = check_cell(last_update)
-    last_update = pd.to_datetime(last_update)
+    # last_update = pd.to_datetime(last_update, dayfirst=True)
     test_cell(last_update, 'time', 'last_update')
     # backup
     backup_int = sel_row['backup'].values
@@ -996,11 +999,7 @@ def get_var_state(csv_file, var_name):
     # refdate
     refdate = sel_row['refdate'].values
     refdate = check_cell(refdate)
-    refdate = pd.to_datetime(refdate)
-    ref_type = test_cell(refdate, 'time', 'refdate')
-    # refdate = today if wrong data
-    if ref_type not in [datetime, pd.Timestamp]:
-        refdate = datetime.today()
+    refdate = pd.to_datetime(refdate, dayfirst=True)
 
     return var_type, last_update, backup, depth_control, refdate
 
@@ -1034,32 +1033,30 @@ def alterfreq(freq, refdate, last_update, var_name, path):
              True: do update
     """
 
-    today = datetime.today()
+    today = date.today()
     update = True
-    refdays_M = pd.Timedelta('30 days')
-    refdays_D = pd.Timedelta('1 days')
-    refdays_Q = pd.Timedelta('92 days')
-
+    refdays__m = pd.Timedelta('33 days')
+    refdays__d = pd.Timedelta('3 days')
+    refdays__q = pd.Timedelta('92 days')
     if freq not in ['D', 'B', 'M', 'Q']:
         df = load_var(path, var_name)
         freq = cu.infer_freq(df)
 
-    if type(last_update) in [datetime, pd.Timestamp]:
+    if type(last_update) in [datetime, pd.Timestamp, date]:
+        last_update = last_update.date()
         tdiff = today - last_update
-        if refdate == today:
-            if freq in ['D', 'B'] and tdiff < refdays_D:
+        if not refdate:
+            if freq in ['D', 'B'] and tdiff < refdays__d:
                 update = False
-                logger.info('Variable not updated {}'.format(var_name))
+                logger.info('Variable already updated {}'.format(var_name))
 
-            if freq == 'M' and tdiff < refdays_M:
+            elif freq == 'M' and tdiff < refdays__m:
                 update = False
-                logger.info('Variable not updated {}'.format(var_name))
+                logger.info('Variable already updated {}'.format(var_name))
 
-            if freq == 'Q' and tdiff < refdays_Q:
+            elif freq == 'Q' and tdiff < refdays__q:
                 update = False
-                logger.info('Variable not updated {}'.format(var_name))
-        else:
-            update = True
+                logger.info('Variable already updated {}'.format(var_name))
 
     return update
 
@@ -1088,10 +1085,14 @@ def reindex(df1, df2):
     df2c = df2.copy()
     df1c.columns = ['VALUE']
     df2c.columns = ['VALUE']
+    df1c.index = pd.DatetimeIndex(df1c.index).normalize()
+    df2c.index = pd.DatetimeIndex(df2c.index).normalize()
+
     if df1c.shape[0] > df2c.shape[0]:
+
         dfx = df2c.reindex_like(df1c)
         dfy = df1c
-        return dfy, dfx
+        return dfx, dfy
     else:
         dfx = df1c.reindex_like(df2c)
         dfy = df2c
