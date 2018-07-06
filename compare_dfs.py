@@ -35,6 +35,7 @@ def compare_two_dfs(df1, df2):
             Empty if df1 equals df2, else:
             All different rows [values/ indexes]
     """
+    print(df1, df2)
     df = pd.DataFrame()
     # Reindixing the DFs to have the same index
     dfx, dfy = reindex(df1, df2)
@@ -55,3 +56,4 @@ def compare_two_dfs(df1, df2):
         return df
 
     return df
+
