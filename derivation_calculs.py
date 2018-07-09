@@ -6,7 +6,6 @@ import math
 import pandas as pd
 from data_utils import reindex
 import numpy as np
-import datetime
 
 glbnano = 86400000000000.0
 
