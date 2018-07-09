@@ -20,6 +20,7 @@ from datetime import datetime, date
 import numpy as np
 import pandas as pd
 from var_logger import setup_logging
+from pathlib2 import Path
 
 # Packages
 try:
@@ -633,10 +634,14 @@ def write_zip(path):
     ------
     None
    """
-    file_name = splitext(path)[0]
+    file_name, extension = splitext(path)
     nfile = basename(path)
+
     zip_name = '{}{}'.format(file_name, '.zip')
     zf = zipfile.ZipFile(zip_name, mode='w')
+    if extension != '.csv':
+        path = Path(path).with_suffix('.csv')
+
     try:
         zf.write(path, nfile)
         logger.info('adding {} to zip folder'.format(nfile))
@@ -896,10 +901,19 @@ def fill_dict_from_df(dfs, variable_name):
 
         if len(parameters) > 0:
             parameters = sel_row['Parameters'].values[0]
-            print(parameters)
-            parameters = ast.literal_eval(parameters)
-            # parameters = parameters.encode('utf-8')
+            logger.info('parameters of the variable {} are: {}'.format(variable_name, parameters))
+            try:
+                parameters = ast.literal_eval(parameters)
+
+            except ValueError:
+                parameters = eval(parameters)
+
+            except SyntaxError:
+                logger.exception('PLEASE VERIFY THE SYNTAX OF THE PARAMETERS, ex: a forgotten quote!!')
+                raise SyntaxError
+
             assert type(parameters) == dict, 'Parameters must be a dict'
+
         else:
             parameters = {}
             logger.debug('No Parameters!')
