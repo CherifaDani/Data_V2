@@ -35,12 +35,13 @@ except ImportError:
     raise ImportError("Don't find the package derivation_calculs")
 
 try:
-    from var_logger import setup_logging
+    import var_logger
 except ImportError:
     print ("Don't find the package var_logger")
+    raise ImportError("Don't find the package var_logger")
 
 # Launching the logger module
-setup_logging()
+var_logger.setup_logging()
 logger = logging.getLogger(__name__)
 logger.debug('Logger for class ')
 # Setting the DEBUG level of the logger
@@ -249,7 +250,7 @@ class Variable(object):
         self.set_params(operation=operation)
         # self.set_params(ope_dict=ope_dict)
         logger.debug('Dictionary for {} is {} in {}'.format(
-                     self.var_name, var_dict, __name__))
+                     self.get_param('var_name'), var_dict, __name__))
 
         return var_dict
 
@@ -348,6 +349,8 @@ class Variable(object):
                                       path)
         logger.debug('prim {}'.format(self.__dict__))
         df = pd.DataFrame()
+        print('update:::{}'.format(update)
+              )
         if update is True:
             logger.debug('Updating primary variable: {}'.format(var_name))
 
@@ -363,7 +366,7 @@ class Variable(object):
             df = pd.DataFrame()
 
             # alert_level have to be equal to 0 to update var
-            if df_info_dict['alert_level'] == 3:
+            if df_info_dict['alert_level'] != 5:
                 df = df_base.append(df_append)
                 df = df[~df.index.duplicated(take_last=False)]
                 # Overwriting primary variable
@@ -372,27 +375,27 @@ class Variable(object):
                 last_update = df.index[-1]
                 self.set_params(last_update=last_update)
                 logger.info('UPDATE DONE, FILE SAVED !!')
-
-                return df, df_info_dict
+                print('df'.format(df))
+                return df
             else:
                 logger.warn('Alert level = {} cannot do the update'.format(
                     df_info_dict['alert_level']))
             logger.debug("Dictionary of current var is: {}".
                          format(self.__dict__))
-            return df
+
         else:
             logger.info('Variable already updated!')
-            return df
+        return df
 
     def test(self):
-        path = self.get_param('path')
-        freq = self.get_param('freq')
-        operation = self.get_param('operation')
-        derived_params = self.get_param('derived_params')
-        ope_dict = self.ope_dict
-        df = self.read_var(path)
-        dfcalc = derivation_calculs.apply_operation(df, freq, operation, derived_params, ope_dict)
-        return dfcalc
+        # path = self.get_param('path')
+        # freq = self.get_param('freq')
+        # operation = self.get_param('operation')
+        # derived_params = self.get_param('derived_params')
+        # df = self.read_var(path)
+        # dfcalc = derivation_calculs.apply_operation(df, freq, operation, derived_params)
+        self.write_dict()
+        return self.get_param('parameters')
 
     def update_deriv(self):
         """
@@ -405,10 +408,9 @@ class Variable(object):
         script_path = self.get_param('script_path')
         state_path = self.get_param('state_path')
 
-
         # Retrieving the parents of the variable
         len_parents = len(parents)
-        #df_calc = pd.DataFrame()
+        # df_calc = pd.DataFrame()
         var_list = []
         if len_parents != 0:
             for p in range(len_parents):
@@ -421,38 +423,34 @@ class Variable(object):
                                )
                 var.write_dict()
                 var_list.append(var)
-                # var.update()
+                # print var.update()
                 # var.write_dict()
 
-                #df = var.read_var(path)
+                # df = var.read_var(path)
 
-                # Updating the current variable
+            # Updating the current variable
             operation = self.get_param('operation')
             derived_params = self.get_param('derived_params')
-            #var.update_secondary(operation, derived_params)
-            #===============================================================
+            # var.update_secondary(operation, derived_params)
             # path = var.get_param('path')
             # freq = var.get_param('freq')
-            #===============================================================
             var_name = self.get_param('var_name')
-            #===============================================================
             # df = data_utils.load_var(path, var_name)
-            #===============================================================
+
             logger.warn('var_name: {}, operation: {}'.format(var_name, operation))
             # derivation_calculs.apply_operation(df, freq, operation,
-                                                    #  derived_params, ope_dict)
+            # derived_params, ope_dict)
             # logger.warn('{} {} {}'.format(path, operation,
             #                              self.get_param('var_type')))
             map(lambda x: x.update(), var_list)
             print self.deriv_var(var_list, operation, derived_params)
-            #print ('df_calc: {}'.format(map(lambda x: x.deriv_var(var_list, operation, derived_params), var_list)))
-
-
-                #var.update()
-                # save to csv
-                # df_calc.to_csv(self.get_param('path'))
-                #df_calc.to_csv('x.csv')
-                #logger.info('saved to x.csv')
+            # print ('df_calc: {}'.format(map(lambda x: x.deriv_var(var_list, operation, derived_params), var_list)))
+            # var.update()
+            # save to csv
+            # df_calc.to_csv(self.get_param('path'))
+            # df_calc.to_csv('x.csv')
+            # logger.info('saved to x.csv')
+        return var_list
 
     def update(self):
         """
@@ -465,26 +463,25 @@ class Variable(object):
         logger.debug('The dictionary of the variable {} is: {}'.
                      format(var_name, var_dict))
 
-
         # Verifying if the variable is a primary var
-        if self.get_param('var_type') == 'Primary':
+        if self.get_param('var_type') == 'primary':
             df = self.update_prim()
             # Saving the meta-data dictionary
             saved_dict = self.write_meta_var()
             logger.debug('Meta-data Dictionary saved: {}'.format(saved_dict))
-            # return df
+            return df
         else:
-            df = self.update_deriv()
-
-            # return df
+            self.update_deriv()
 
     def deriv_var(self, var_list, operation, derived_params):
         map(lambda x: x.write_dict(), var_list)
         freq = self.get_param('freq')
 
-        return derivation_calculs.apply_operation(var_list,
-                                                  freq,
-                                                  operation,
-                                                  derived_params)
-        # if df_calc is not None:
-        #     df_calc.to_csv(self.get_param('path') + 'copy')
+        df_calc = derivation_calculs.apply_operation(var_list,
+                                                     freq,
+                                                     operation,
+                                                     derived_params)
+        path = self.get_param('path')
+        if df_calc is not None:
+            data_utils.write_zip(path)
+            df_calc.to_csv(path)
