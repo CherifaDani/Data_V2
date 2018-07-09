@@ -96,11 +96,11 @@ def apply_operation(var_list, freq, operation, parameters):
         # fdf = apply_futures_roll(dfs[0], dfs[1], rolldict)
 
     elif operation == 'vol':
-        period = parameters['period']
-        window = parameters['window']
-        inpct = parameters['inpct']
-        annualize = parameters['annualize']
-        fillinit = parameters['fillinit']
+        period = parameters.get('period', 1)
+        window = parameters.get('window', 20)
+        inpct = parameters.get('inpct', True)
+        annualize = parameters.get('annualize', True)
+        fillinit = parameters.get('fillinit', True)
         fdf = apply_vol(dfs[0], period, window, inpct, annualize, fillinit, freq)
 
     elif operation == 'ohlcvol':
@@ -509,9 +509,10 @@ def estimate_nat_freq(df):
 
 def apply_vol(df, period, window, inpct, annualize, fillinit, freq):
     '''Renvoie la série des volatilités de rendements '''
-    if not period:
+    if period != 0:
         diffdata = apply_pctdelta(df, period, freq, inpct)
-
+    else:
+        diffdata = df
     voldata = pd.rolling_std(diffdata, window=window)
     if fillinit:
         voldata[0: window] = voldata[0: window + 1].fillna(method='bfill')
@@ -520,7 +521,7 @@ def apply_vol(df, period, window, inpct, annualize, fillinit, freq):
     newcols = range(len(cols))
     for icol, col in enumerate(cols):
         if annualize:
-            nfreqdict = df.estimate_nat_freq(col)
+            nfreqdict = estimate_nat_freq(col)
             nfreq = max(1, nfreqdict['min'])
             annfactor = math.sqrt(260 / nfreq)
         else:
