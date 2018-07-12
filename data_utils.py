@@ -745,7 +745,7 @@ def read_deriv_script(filename, sheet_name):
         sheetname = sheet_name
     logger.info('Processing sheetname : {}'.format(sheetname))
     try:
-        dfs = pd.read_excel(filename, sheetname=sheetname)
+        dfs = xls.parse(sheet_name)
 
     except IOError:
         logger.exception('Impossible to read the derivation script !..')
