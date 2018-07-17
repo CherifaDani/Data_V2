@@ -409,6 +409,7 @@ class Variable(object):
         state_path = self.get_param('state_path')
 
         # Retrieving the parents of the variable
+        parents = list(set(parents))
         len_parents = len(parents)
         # df_calc = pd.DataFrame()
         var_list = []
@@ -476,8 +477,10 @@ class Variable(object):
     def deriv_var(self, var_list, operation, derived_params):
         map(lambda x: x.write_dict(), var_list)
         freq = self.get_param('freq')
+        var_name = self.get_param('var_name')
 
         df_calc = derivation_calculs.apply_operation(var_list,
+                                                     var_name,
                                                      freq,
                                                      operation,
                                                      derived_params)
@@ -485,3 +488,4 @@ class Variable(object):
         if df_calc is not None:
             data_utils.write_zip(path)
             df_calc.to_csv(path)
+        # return df_calc
