@@ -269,7 +269,7 @@ def load_from_file(path):
     # Test the type a file
     if extension == '.csv':
         df = pd.read_csv(path, sep=sep, index_col=0, parse_dates=True)
-        np.around(df, 6)
+        # df = np.around(df, 6)
         nrows = df.shape[0]
         if not df.empty and nrows > 2:
             df.index = pd.DatetimeIndex(df.index)
@@ -642,12 +642,12 @@ def write_zip(path):
     if extension != '.csv':
         path = Path(path).with_suffix('.csv')
 
-    try:
-        zf.write(path, nfile)
-        logger.info('adding {} to zip folder'.format(nfile))
-    finally:
-        logger.info('closing zip file')
-        zf.close()
+    # try:
+    #     zf.write(path, nfile)
+    #     logger.info('adding {} to zip folder'.format(nfile))
+    # finally:
+    #     logger.info('closing zip file')
+    #     zf.close()
 
 
 def write_dict_to_csv(csv_name, f_dict, mode='w'):

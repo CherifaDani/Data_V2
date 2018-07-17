@@ -224,7 +224,7 @@ def apply_timeshift(df, var_name, shift=1, freq='B', ownfreq=None, refdate=None)
     return ndf
 
 
-def apply_combi(dfx, dfy, var_name, idx1=0, coeff1=1, idx2=1, coeff2=0, constant=0,
+def apply_combi(dfx, dfy, var_name, coeff1=1, coeff2=0, constant=0,
                 islinear=True, transfo=None):
     '''Renvoie la combinaison linéaire ou exponentielle de deux colonnes. '''
     df1, df2 = reindex(dfx, dfy)
@@ -397,16 +397,20 @@ def apply_ewma(df, var_name, emadecay=None, span=1, inplace=True,
     return newdataset
 
 
-def apply_corr(dfx, dfy, var_name, period=1,
-               span=20, exponential=True,
-               inpct=True, cols=None, lag2=0
+def apply_corr(dfx, dfy, span,  period=1,
+               exponential=True,
+               inpct=True, cols=None, lag=0
                ):
     '''Renvoie la série des corrélations entre deux colonnes d'un Dataset
        period: si 0, corrélation des valeurs, si > 0, corrélation des variations sur period
        lag2: retard sur la seconde colonne
        cols: spécifications de 1 ou 2 colonnes
     '''
-    df1, df2 = reindex(dfx, dfy)
+    if dfy is not None:
+        df1, df2 = reindex(dfx, dfy)
+    else:
+        df1 = dfx
+        df2 = dfx
     newdataset = pd.DataFrame(index=dfx.index)
 
     cols1 = get_columns(df1, cols)
@@ -420,17 +424,17 @@ def apply_corr(dfx, dfy, var_name, period=1,
         col2 = df2
     # #  si period == 0 c'est l'autocorrélation des valeurs
     # #  et non des variations qui est calculée
-    startval = period + lag2 * period
+    startval = period + lag * period
     if period == 0:
         data1 = col1
-        data2 = col2.shift(periods=lag2)
+        data2 = col2.shift(periods=lag)
     else:
         if inpct:
             data1 = col1.pct_change(period)[startval:]
-            data2 = col2.pct_change(period).shift(periods=lag2 * period)[startval:]
+            data2 = col2.pct_change(period).shift(periods=lag * period)[startval:]
         else:
             data1 = col1.diff(period)[startval:]
-            data2 = col2.diff(period).shift(periods=lag2 * period)[startval:]
+            data2 = col2.diff(period).shift(periods=lag * period)[startval:]
 
     if exponential:
         corrdata = pd.ewmcorr(data1[startval:], data2[startval:], span=span)
@@ -438,7 +442,7 @@ def apply_corr(dfx, dfy, var_name, period=1,
         corrdata = pd.rolling_corr(data1, data2, window=span)
     corrdata = corrdata.dropna()
     newdataset['Corr'] = corrdata
-    newdataset.columns = [var_name]
+    # newdataset.columns = [var_name]
     return newdataset
 
 

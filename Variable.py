@@ -297,7 +297,7 @@ class Variable(object):
                      format(var_name, df_info_dict))
         return df, df_info_dict
 
-    def write_meta_var(self):
+    def write_state_var(self):
         """
         Function writing important informations about
         the variables to a csv file.
@@ -468,7 +468,7 @@ class Variable(object):
         if self.get_param('var_type') == 'primary':
             df = self.update_prim()
             # Saving the meta-data dictionary
-            saved_dict = self.write_meta_var()
+            saved_dict = self.write_state_var()
             logger.debug('Meta-data Dictionary saved: {}'.format(saved_dict))
             return df
         else:
@@ -480,7 +480,6 @@ class Variable(object):
         var_name = self.get_param('var_name')
 
         df_calc = derivation_calculs.apply_operation(var_list,
-                                                     var_name,
                                                      freq,
                                                      operation,
                                                      derived_params)
@@ -488,4 +487,3 @@ class Variable(object):
         if df_calc is not None:
             data_utils.write_zip(path)
             df_calc.to_csv(path)
-        # return df_calc

@@ -9,7 +9,11 @@ def read_df(x):
     return x.read_var(x.get_param('path'))
 
 
-def apply_operation(var_list, list_var_name,  freq, operation, parameters):
+def get_var_name(x):
+    return x.get_param('var_name')
+
+
+def apply_operation(var_list, freq, operation, parameters):
     """
     Function used to derive dataframes
  
@@ -36,8 +40,11 @@ def apply_operation(var_list, list_var_name,  freq, operation, parameters):
     """
     fdf = pd.DataFrame()
     dfs = map(lambda x: read_df(x), var_list)
-    idx0 = dfs[0] if len(list(dfs)) == 1 else None
+    var_names = map(lambda x: get_var_name(x), var_list)
+    idx0 = dfs[0]
+    var_name0 = var_names[0]
     idx1 = dfs[1] if len(list(dfs)) == 2 else None
+    var_name1 = var_names[1] if len(list(var_names)) == 2 else None
     if operation == 'timeshift':
         shift = parameters.get('shift', 0)
         fdf = dfunc.apply_timeshift(idx0, freq, shift)
@@ -46,11 +53,16 @@ def apply_operation(var_list, list_var_name,  freq, operation, parameters):
         pass
 
     elif operation == 'combi':
-        # dfs = map(lambda x: read_df(x), var_list)
         coeff1 = parameters.get('coeff1', 1)
         coeff2 = parameters.get('coeff2', 0)
         islinear = parameters.get('lin', True)
         transfo = parameters.get('transfo', None)
+        col1 = parameters.get('col1', 0)
+        col2 = parameters.get('col2', 1)
+        if col1 == 1 and col2 == 0:
+            idx0 = idx1
+            idx1 = idx0
+
         fdf = dfunc.apply_combi(idx0, idx1, coeff1, coeff2, islinear, transfo)
 
     elif operation == 'pctdelta':
@@ -117,14 +129,12 @@ def apply_operation(var_list, list_var_name,  freq, operation, parameters):
     elif operation == 'delta_acorr':
         period = parameters.get('period', 0)
         shortwindow = parameters.get('shortwindow', 20)
-        longwindow  = parameters.get('longwindow', 100)
+        longwindow = parameters.get('longwindow', 100)
         lag = parameters.get('lag', 1)
         inpct = parameters.get('inpct', True)
         exponential = parameters.get('exponential', True)
-        acorrshort = dfunc.apply_corr(idx0, period, inpct, lag, exponential, span=shortwindow)
-
-        acorrlong = dfunc.apply_corr(idx0, period, inpct, lag, exponential, span=longwindow)
-
+        acorrshort = dfunc.apply_corr(idx0, idx1, period=period, inpct=inpct, lag=lag, exponential=exponential, span=shortwindow)
+        acorrlong = dfunc.apply_corr(idx0, idx1, period=period, inpct=inpct, lag=lag, exponential=exponential, span=longwindow)
         fdf = acorrshort - acorrlong
 
     elif operation == 'cat':
@@ -150,8 +160,8 @@ def apply_operation(var_list, list_var_name,  freq, operation, parameters):
         if mult != 1:
             return fdf * mult
 
-    if 'lag' in parameters:
-        return dfunc.apply_timeshift(fdf, freq, parameters['lag'])
+    # if 'lag' in parameters:
+    #     return dfunc.apply_timeshift(fdf, freq, parameters['lag'])
     if 'add' in parameters:
         add = parameters['add']
         if add != 0:
