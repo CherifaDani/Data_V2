@@ -50,7 +50,7 @@ state_path = 'variable_state.csv'
 # var_name = 'FUT_BUND_TREND6M'  # complex variable ==> futures_roll
 # var_name = 'CDS_GER_1Y_Z250D'
 # var_name = 'CDS_GER_1Y'
-var_name = 'SWAP_JPY_10Y_DACE_1_20_100'
+var_name = 'STR_USD_1D_Z5D'
 
 
 

@@ -216,7 +216,7 @@ def discretize(xcol, nb_bucket, bins=None):
         return xcol
 
 
-def load_var(path, var_name, times_series=False):
+def load_var(path, var_name, times_series=False, round=False):
     """
     Function used to load a variable from a path
 
@@ -237,18 +237,19 @@ def load_var(path, var_name, times_series=False):
     """
     # test if the path is to a file...
     if os.path.isfile(path):
-        return load_from_file(path)
+        return load_from_file(path=path, round=round)
 
     # ... or to a directory
     elif os.path.isdir(path):
-        return load_from_dir(path, var_name, times_series)
+        return load_from_dir(path=path, var_name=var_name,
+                             times_series=times_series)
 
     else:
         warnings.warn('Path error: %s' % path)
         sys.exit()
 
 
-def load_from_file(path):
+def load_from_file(path, round):
     """
     Function used to load a variable from a csv
 
@@ -269,7 +270,8 @@ def load_from_file(path):
     # Test the type a file
     if extension == '.csv':
         df = pd.read_csv(path, sep=sep, index_col=0, parse_dates=True)
-        # df = np.around(df, 6)
+        if round is True:
+            df = np.around(df, 6)
         nrows = df.shape[0]
         if not df.empty and nrows > 2:
             df.index = pd.DatetimeIndex(df.index)
@@ -642,12 +644,12 @@ def write_zip(path):
     if extension != '.csv':
         path = Path(path).with_suffix('.csv')
 
-    # try:
-    #     zf.write(path, nfile)
-    #     logger.info('adding {} to zip folder'.format(nfile))
-    # finally:
-    #     logger.info('closing zip file')
-    #     zf.close()
+    try:
+        zf.write(path, nfile)
+        logger.info('adding {} to zip folder'.format(nfile))
+    finally:
+        logger.info('closing zip file')
+        zf.close()
 
 
 def write_dict_to_csv(csv_name, f_dict, mode='w'):
@@ -881,6 +883,9 @@ def fill_dict_from_df(dfs, variable_name):
         path = sel_row['Path'].values
         path = check_cell(path)
         test_cell(path, 'str', 'Path')
+        extension = os.path.splitext(path)[1]
+        if extension != '.csv':
+            path = '{}{}'.format(path, '.csv')
 
         # Parents
         parents = sel_row['Parent List'].values
@@ -1095,19 +1100,22 @@ def reindex(df1, df2):
     dfy : {Dataframe type}
             df2 with the same index as df1
     """
-    df1c = df1.copy()
-    df2c = df2.copy()
-    df1c.columns = ['VALUE']
-    df2c.columns = ['VALUE']
-    df1c.index = pd.DatetimeIndex(df1c.index).normalize()
-    df2c.index = pd.DatetimeIndex(df2c.index).normalize()
+    df1 = df1.copy()
+    df2 = df2.copy()
+    list1 = df1.columns
+    list2 = df2.columns
+    df1.columns = ['VALUE']
+    df2.columns = ['VALUE']
 
-    if df1c.shape[0] > df2c.shape[0]:
+    df1.index = pd.DatetimeIndex(df1.index).normalize()
+    df2.index = pd.DatetimeIndex(df2.index).normalize()
 
-        dfx = df2c.reindex_like(df1c)
-        dfy = df1c
+    if df1.shape[0] > df2.shape[0]:
+
+        dfx = df2.reindex_like(df1)
+        dfy = df1
         return dfx, dfy
     else:
-        dfx = df1c.reindex_like(df2c)
-        dfy = df2c
+        dfx = df1.reindex_like(df2)
+        dfy = df2
         return dfx, dfy

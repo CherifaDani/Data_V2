@@ -35,10 +35,15 @@ def compare_two_dfs(df1, df2):
             Empty if df1 equals df2, else:
             All different rows [values/ indexes]
     """
-    print(df1, df2)
+    # print(df1, df2)
     df = pd.DataFrame()
+    df1 = df1.dropna()
+    df2 = df2.dropna()
     # Reindixing the DFs to have the same index
     dfx, dfy = reindex(df1, df2)
+    dfx = np.around(dfx, 6)
+    dfy = np.around(dfy, 6)
+
     if df1.equals(df2):
         # Do nothing
         logger.info('DF1 equals DF2')
@@ -53,7 +58,5 @@ def compare_two_dfs(df1, df2):
         df = pd.DataFrame({'DF0': df_from, 'DF1': df_to}, index=df_diff.index)
         logger.debug('Comparison done!, There are: {} differences'.
                      format(df.shape[0]))
-        return df
-
     return df
 
