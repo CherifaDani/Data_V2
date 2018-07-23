@@ -49,6 +49,7 @@ def apply_operation(var_list, freq, operation, parameters):
     if col1 == 1:
         idx0 = idx1
         idx1 = idx0
+
     # if 'shift' in parameters:
     #     # décalage des dates pour tenir compte de la disponibilité réelle des données
     #     # s'applique à toutes les colonnes d'un dataset
@@ -69,7 +70,7 @@ def apply_operation(var_list, freq, operation, parameters):
         coeff2 = parameters.get('coeff2', 0)
         islinear = parameters.get('lin', True)
         transfo = parameters.get('transfo', None)
-        fdf = dfunc.apply_combi(idx0, idx1, coeff1=coeff1, coeff2=coeff2, islinear=islinear, transfo=transfo)
+        fdf = dfunc.apply_combi(df1=idx0, df2=idx1, coeff1=coeff1, coeff2=coeff2, islinear=islinear, transfo=transfo)
 
     elif operation == 'pctdelta':
         period = parameters.get('period', 1)
@@ -82,7 +83,6 @@ def apply_operation(var_list, freq, operation, parameters):
         fdf = dfunc.take_diff(df=idx0, period=period, inplace=False,
                              inpct=False,
                              ownfreq=freq)
-
 
     elif operation == 'rollingreturn':
         period = parameters.get('period', 1)

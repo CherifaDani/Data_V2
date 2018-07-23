@@ -18,9 +18,19 @@ state_path = 'variable_state.csv'
 # var_name = 'FUT_ESTX50_C1_RET1D'  # rolling_return, csv absent
 # var_name = 'SP500_RET1'  # rolling_return
 # var_name = 'Spread_GOV_USA_30Y-GOV_JPN_30Y'  # combi
+# var_name = 'Spread_SWAP_USD_2Y-GOV_USA_2Y'  # combi
+# var_name = 'CORP_IG_USA_5Y'  # combi
+# var_name = 'USDEUR_CR20'  # combi
+# var_name = 'SP500_EBIT1Y_YIELD'  # combi
+# var_name = 'SP500_DPS_YIELD'  # combi
+# var_name = 'SP500_CR20'  # combi
+# var_name = 'SP500_RCR20'  # csv absent!
+var_name = 'SP500_RCR20_SGN'
+
 # var_name = 'FUT_CL_NAV'  # cumret
+
 # var_name = 'FUT_ESTX50_RET1ROLL'  # futures_roll csv absent
-var_name = 'FUT_JNI_RET1ROLL'  # futures_roll
+# var_name = 'FUT_JNI_RET1ROLL'  # futures_roll
 # var_name = 'SP500_RET1'  # rolling_return
 # var_name = 'STR_JPY_1D_DACE_1_20_100'  # autocorr
 # var_name = 'CDS_UK_1Y_DACE_1_20_100'  # autocorr
@@ -38,14 +48,6 @@ operation = (b.get_param('operation'))
 parameters = b.get_param('derived_params')
 dfx = b.read_var(b.get_param('path'))
 
-
-
-
-# print(dfx.dropna())
-
-# print(pd.DataFrame(data=(dfx+dfx)))
-
-# var_name2 = 'STR_USD_1D'
 c = Variable(script_path=script_path,
              state_path=state_path,
              var_name=var_name2[0])
@@ -55,6 +57,30 @@ d = Variable(script_path=script_path,
              var_name=var_name2[1])
 d.write_dict()
 df = derivation_calculs.apply_operation(var_list=[c, d], freq='B', operation=operation, parameters=parameters)
+print '################################DF##########################################'
+print(df)
+df.to_csv('x_test.csv')
+print compare_dfs.compare_two_dfs(dfx, df)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # if len(var_name2) > 1:
 #     d = Variable(script_path=script_path,
@@ -72,14 +98,11 @@ df = derivation_calculs.apply_operation(var_list=[c, d], freq='B', operation=ope
 # emadecay = parameters['emadecay']
 # span = 2.0 / (emadecay - 1)
 # dfs = pd.ewma(dfy, span=span)
-print '################################DF##########################################'
 # dfc = c.read_var(c.get_param('path'))
-print(df)
-df.to_csv('x_test.csv')
 # print(b.get_param('parents'))
 # # print b.update()
 # print 'dfx: {}'.format(dfx)
-# print compare_dfs.compare_two_dfs(dfx, df)
+
 # print derivation_functions.apply_lag(dfx, lag=1, freq='B', cols=None, inplace=False)
 
 #
