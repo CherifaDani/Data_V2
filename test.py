@@ -5,7 +5,7 @@ import derivation_functions
 import compare_dfs
 import pandas as pd
 
-script_path = 'CM.xlsx'
+script_path = '1V.xlsx'
 state_path = 'variable_state.csv'
 # var_name = 'STR_USD_1D_Z250D'  # ewma
 # var_name = 'STR_USD_1D'
@@ -25,9 +25,12 @@ state_path = 'variable_state.csv'
 # var_name = 'SP500_DPS_YIELD'  # combi
 # var_name = 'SP500_CR20'  # combi
 # var_name = 'SP500_RCR20'  # csv absent!
-var_name = 'SP500_RCR20_SGN'
-
+# var_name = 'SP500_RCR20_SGN'  # var not found
+# var_name = 'Corr_GOV_USA_10Y-GOV_GER_10Y'  # corr
+# var_name = 'Corr_BOVES_LAST-Gold'  # corr
+# var_name = 'Corr_WTI-Gold'  # corr
 # var_name = 'FUT_CL_NAV'  # cumret
+var_name = 'Gold_DACE_1_20_100'
 
 # var_name = 'FUT_ESTX50_RET1ROLL'  # futures_roll csv absent
 # var_name = 'FUT_JNI_RET1ROLL'  # futures_roll
@@ -37,7 +40,7 @@ var_name = 'SP500_RCR20_SGN'
 # var_name = 'GOV_USA_1Y_DACE_1_20_100'  # autocorr
 # var_name = 'FRA_USD_6X12_DACE_1_20_100'
 
-
+#
 b = Variable(script_path=script_path,
              state_path=state_path,
              var_name=var_name)
@@ -52,11 +55,11 @@ c = Variable(script_path=script_path,
              state_path=state_path,
              var_name=var_name2[0])
 c.write_dict()
-d = Variable(script_path=script_path,
-             state_path=state_path,
-             var_name=var_name2[1])
-d.write_dict()
-df = derivation_calculs.apply_operation(var_list=[c, d], freq='B', operation=operation, parameters=parameters)
+# d = Variable(script_path=script_path,
+#              state_path=state_path,
+#              var_name=var_name2[1])
+# d.write_dict()
+df = derivation_calculs.apply_operation(var_list=[c], freq='B', operation=operation, parameters=parameters)
 print '################################DF##########################################'
 print(df)
 df.to_csv('x_test.csv')

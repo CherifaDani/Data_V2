@@ -465,7 +465,7 @@ class Variable(object):
                      format(var_name, var_dict))
 
         # Verifying if the variable is a primary var
-        if self.get_param('var_type') == 'primary':
+        if self.get_param('var_type') in ['Primary', 'primary']:
             df = self.update_prim()
             # Saving the meta-data dictionary
             saved_dict = self.write_state_var()

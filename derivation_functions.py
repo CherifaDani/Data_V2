@@ -409,47 +409,40 @@ def apply_corr(df1, df2, period=1,
     df = pd.concat([df1, df2], axis=1)
     cols = get_columns(df)
     if len(cols) == 1:
-        col1 = df1
+        col1 = cols[0]
         col2 = col1
     else:
-        col1 = df1
-        col2 = df2
+        col1 = cols[0]
+        col2 = cols[1]
     # #  si period == 0 c'est l'autocorrélation des valeurs
     # #  et non des variations qui est calculée
     startval = period + lag * period
-    data1 = df1
-    data2 = df2
     if period == 0:
-        data1 = df1
-        data2 = df2.shift(periods=lag)
+        data1 = df[col1]
+        data2 = df[col2].shift(periods=lag)
 
     else:
         if inpct:
-            data1 = data1.pct_change(period)[startval:]
+            data1 = df[col1].pct_change(period)[startval:]
 
-            data2 = data2.pct_change(period).shift(periods=lag * period)[startval:]
+            data2 = df[col2].pct_change(period).shift(periods=lag * period)[startval:]
 
         else:
-            data1 = data1.diff(period)[startval:]
-            data2 = data2.diff(period).shift(periods=lag * period)[startval:]
-    # if exponential:
-    corrdata = pd.ewmcorr(data1[startval:], data2[startval:], span=span)
-    # else:
-    #     corrdata = pd.rolling_corr(data1, data2, window=span)
-    # pdb.set_trace()
-    # voldata=pd.rolling_mean(diffdata, window=window)+
+            data1 = df[col1].diff(period)[startval:]
+            data2 = df[col2].diff(period).shift(periods=lag * period)[startval:]
 
-    # newdataset =
-    # corrname = self.name + glbFieldSep + 'CORR'
-    # corrname = corrname + '[' + str(col1) + ',' + str(col2) + ',' + str(span) + ']'
-    # newdataset = corrdata.dropna()
-    # # newdataset['CORR'] = corrdata
-    # # nom de la colonne: radical + Vol
-    # # newcols [icol]=col.split(fieldsep)[0] + fieldsep + 'VOL@'+ str(window)
-    # # newdataset.name = corrname
-    # newdataset.columns = ['CORR']
-    # return newdataset
-    return corrdata
+    if not exponential:
+        corrdata = pd.ewmcorr(data1[startval:], data2[startval:], span=span)
+    else:
+        corrdata = pd.rolling_corr(data1, data2, window=span)
+    # print(corrdata)
+    # newdataset = corrdata
+
+    newdataset = pd.DataFrame(index=df.index, data=corrdata)
+    newdataset.columns = ['CORR']
+
+    return newdataset
+
 # def apply_corr(dfx, dfy, span=20,  period=1,
 #                exponential=True,
 #                inpct=True, cols=None, lag=0
@@ -914,16 +907,16 @@ def apply_roll_shift(dates, roll_dict):
     return df_rolldates
 
 
-def fill_missing_values(df1, df2, idxmain=0, idxsubst=1, dfsubst=None):
+def fill_missing_values(idxmain, idxsubst, dfsubst=None):
     '''Remplit les valeurs manquantes de la colonne idxmain par la colonne idxsubst '''
-    df = pd.concat([df1, df2], axis=1)
+    df = pd.concat([idxmain, idxsubst], axis=1)
     if dfsubst is None:
         df2 = df
     else:
         df2 = dfsubst
     try:
         maincol = get_columns(idxmain)[0]
-        substcol = get_columns(idxsubst)[0]
+        substcol = get_columns(df2)[0]
         if dfsubst is not None:
             df[substcol] = df2[substcol]
 
@@ -941,6 +934,56 @@ def apply_ohlc_vol(df, OHLCcols=None,
                              algo='yang'):
     '''Renvoie la série des volatilités de rendements '''
 
+
+def auto_categorize(df, mod=10, level_date=None, date_end=None, min_r=0.02):
+    ''' Renvoie une liste :(ds catégorisée ou None si on à moins de deux modalitées, nombre de modalités, les bins)'''
+    # pdb.set_trace()
+    ds_copy = df.copy()
+    if date_end is not None:
+        if ds_copy.index.nlevels == 1:
+            ds_copy = ds_copy.loc[:date_end]
+        # cas d'un multi index
+        elif ds_copy.index.nlevels == 2:
+            ds_copy = ds_copy.loc[ds_copy.index.get_level_values(level_date) <= date_end]
+            ds_copy = ds_copy.stack()
+
+    df_q = [ds_copy.quantile(q=i / float(mod)) for i in range(0, int(mod) + 1, 1)]
+    df_q = pd.DataFrame(df_q)
+    bins = list(np.unique(df_q.dropna(how='all')))
+
+    if len(bins) > 2:
+        bins[0] = -10000000.
+        bins[-1] = 10000000.
+
+        def qq(serie, bins):
+            '''catégorise les colonnes d'un ds '''
+            res = pd.cut(serie, bins=bins, right=False, retbins=True, labels=False)[0]
+            return res
+
+        def check_df(ds, min_r=min_r, bins=bins):
+            ''' vérification si toutes le modalitées couvre au moins minR%. Si ok on renvoi les bins d'origine, sinon on finsionne les modalités et en renvoi les bins'''
+            bins_ = bins[:]
+            total = float(len(ds.dropna(how='all')))
+            # pdb.set_trace()
+            for i in range(len(bins) - 1):
+                j = i + 1
+                try:
+                    v = len(ds.loc[(ds >= bins[i]) & (ds < bins[j])].dropna(how='all'))
+                except Exception as e:
+                    col_ = ds.columns[0]
+                    v = len(ds[col_].loc[(ds[col_] >= bins[i]) & (ds[col_] < bins[j])].dropna())
+                if (v / total) < min_r:
+                    bins_.remove(bins[j])
+            return bins_
+
+        bins = check_df(ds_copy, min_r=min_r)
+        if len(bins) > 2:
+            ds = pd.DataFrame(df.copy().apply(lambda x: qq(x, bins)))
+            return ds  # , len(bins)-1, bins
+        else:
+            return np.nan  # , len(bins)-1, bins
+    else:
+        return np.nan  # , len(bins)-1, bins
 
 
 # def apply_ohlc_vol(df,

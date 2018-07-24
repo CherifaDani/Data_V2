@@ -8,7 +8,7 @@ import pandas as pd
 """
 
 
-xls = pd.ExcelFile('CM.xlsx', on_demand=True)
+xls = pd.ExcelFile('1V.xlsx', on_demand=True)
 sheets = xls.sheet_names
 # print(sheets)
 dfx = pd.DataFrame()
@@ -36,4 +36,4 @@ for sheet in e:
 dfx = dfx.dropna(how='any')
 
 print(dfx.shape)
-dfx.to_csv('x.csv', index=False)
+dfx.to_csv('variable_state.csv', index=False)

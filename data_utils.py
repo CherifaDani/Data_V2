@@ -742,17 +742,23 @@ def read_deriv_script(filename, sheet_name):
     # Attempt to extract the sheet name without loading the whole file
     xls = pd.ExcelFile(filename, on_demand=True)
     sheets = xls.sheet_names
+
+    # sheets = (x.upper() for x in sheets)
+    # print(sheets)
+    # sheets = [x.upper() for x in sheets]
     # Verifying if the sheet belongs to the derivation script
     if sheet_name in sheets:
-        sheetname = sheet_name
-    logger.info('Processing sheetname : {}'.format(sheetname))
+        print(sheet_name)
+        # sheet_name = sheet_name.upper()
+        logger.info('Processing sheetname : {}'.format(sheet_name))
     try:
+        # xls = map(lambda x: x.upper(), xls)
         dfs = xls.parse(sheet_name)
 
     except IOError:
         logger.exception('Impossible to read the derivation script !..')
     except XLRDError:
-        logger.exception("No sheet named <'{}'> !".format(sheetname))
+        logger.exception("No sheet named <'{}'> !".format(sheet_name))
 
         # Replace all read NaN values by an empty string
         dfs.fillna('', inplace=True)
@@ -998,6 +1004,7 @@ def get_var_state(csv_file, var_name):
     # var_type
     var_type = sel_row['var_type'].values
     var_type = check_cell(var_type)
+    # var_type = var_type.upper()
     test_cell(var_type, 'str', 'var_type')
     # last_update
     last_update = sel_row['last_update'].values
@@ -1104,8 +1111,9 @@ def reindex(df1, df2):
     df2 = df2.copy()
     list1 = df1.columns
     list2 = df2.columns
-    df1.columns = ['VALUE']
-    df2.columns = ['VALUE']
+    if len(df1.columns) == 1:
+        df1.columns = ['VALUE']
+        df2.columns = ['VALUE']
 
     df1.index = pd.DatetimeIndex(df1.index).normalize()
     df2.index = pd.DatetimeIndex(df2.index).normalize()

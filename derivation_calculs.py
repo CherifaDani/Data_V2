@@ -63,7 +63,7 @@ def apply_operation(var_list, freq, operation, parameters):
     elif operation == 'fillmissing':
         idxmain = parameters.get('main', 0)
         idxsubst = parameters.get('subst', 1)
-        fdf = dfunc.fill_missing_values(idx0, idx1, idxmain=idxmain, idxsubst=idxsubst)
+        fdf = dfunc.fill_missing_values(idxmain=idx0, idxsubst=idx1)
 
     elif operation == 'combi':
         coeff1 = parameters.get('coeff1', 1)
@@ -132,11 +132,11 @@ def apply_operation(var_list, freq, operation, parameters):
                              fillinit=fillinit,
                              algo=algo)
     elif operation == 'corr':
-        period = parameters['period']
-        window = parameters['window']
-        inpct = parameters['inpct']
-        exponential = parameters['exponential']
-        lag = parameters['lag2']
+        period = parameters.get('period', 0)
+        window = parameters.get('window', 20)
+        lag = parameters.get('lag', 0)
+        inpct = parameters.get('inpct', True)
+        exponential = parameters.get('exponential', True)
         fdf = dfunc.apply_corr(df1=idx0, df2=idx1, period=period, inpct=inpct,
                                lag=lag,
                                exponential=exponential, span=window, cols=None)
@@ -162,7 +162,12 @@ def apply_operation(var_list, freq, operation, parameters):
         catcols = parameters.get('catcols', None)
         dend = parameters.get('dend', None)
         type_quant = parameters.get('type_quantilize', '')
-
+        if type(levels) == list or levels > 0:
+            if type_quant == 'auto':
+                fdf = auto_categorize(idx0, mod=10, date_end=dend, min_r=0.02)
+            else:
+                fdf = categorize(idx0, quantilize=quantilize, levels=levels,
+                                 cols=catcols, dstart=dstart, dend=dend, inplace=False)
     elif operation == 'modifdur':
         maturity = parameters.get('maturity', 1)
 
@@ -196,5 +201,4 @@ def apply_operation(var_list, freq, operation, parameters):
             dstart = parameters['dstart']
             catcols = parameters['catcols']
             dend = parameters['dend']
-
     return fdf
