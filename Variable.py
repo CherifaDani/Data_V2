@@ -297,7 +297,7 @@ class Variable(object):
                      format(var_name, df_info_dict))
         return df, df_info_dict
 
-    def write_meta_var(self):
+    def write_state_var(self):
         """
         Function writing important informations about
         the variables to a csv file.
@@ -409,6 +409,7 @@ class Variable(object):
         state_path = self.get_param('state_path')
 
         # Retrieving the parents of the variable
+        parents = list(set(parents))
         len_parents = len(parents)
         # df_calc = pd.DataFrame()
         var_list = []
@@ -464,10 +465,10 @@ class Variable(object):
                      format(var_name, var_dict))
 
         # Verifying if the variable is a primary var
-        if self.get_param('var_type') == 'primary':
+        if self.get_param('var_type') in ['Primary', 'primary']:
             df = self.update_prim()
             # Saving the meta-data dictionary
-            saved_dict = self.write_meta_var()
+            saved_dict = self.write_state_var()
             logger.debug('Meta-data Dictionary saved: {}'.format(saved_dict))
             return df
         else:
@@ -476,6 +477,7 @@ class Variable(object):
     def deriv_var(self, var_list, operation, derived_params):
         map(lambda x: x.write_dict(), var_list)
         freq = self.get_param('freq')
+        var_name = self.get_param('var_name')
 
         df_calc = derivation_calculs.apply_operation(var_list,
                                                      freq,
