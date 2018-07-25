@@ -4,6 +4,9 @@ import derivation_calculs
 import derivation_functions
 import compare_dfs
 import pandas as pd
+import data_utils
+import numpy as np
+
 
 script_path = '1V.xlsx'
 state_path = 'variable_state.csv'
@@ -30,20 +33,28 @@ state_path = 'variable_state.csv'
 # var_name = 'Corr_BOVES_LAST-Gold'  # corr
 # var_name = 'Corr_WTI-Gold'  # corr
 # var_name = 'FUT_CL_NAV'  # cumret
-var_name = 'Gold_DACE_1_20_100'
-
-# var_name = 'FUT_ESTX50_RET1ROLL'  # futures_roll csv absent
+# var_name = 'Gold_DACE_1_20_100'
+# var_name = 'CORP_IG_USA_5Y'
+# var_name = 'FUT_BUND_RCR20'
+# var_name = 'FUT_BUND_CR1'
+# var_name = 'FUT_ESTX50_RET1ROLL'  # futures_roll
 # var_name = 'FUT_JNI_RET1ROLL'  # futures_roll
 # var_name = 'SP500_RET1'  # rolling_return
 # var_name = 'STR_JPY_1D_DACE_1_20_100'  # autocorr
 # var_name = 'CDS_UK_1Y_DACE_1_20_100'  # autocorr
 # var_name = 'GOV_USA_1Y_DACE_1_20_100'  # autocorr
 # var_name = 'FRA_USD_6X12_DACE_1_20_100'
+# var_name = 'FUT_BUND_DRIFT'
+# var_name = 'FUT_BUND_SGN_CR5'
+# var_name = 'FUT_BUND_SGN_CR20'  # bad line
+# var_name = 'SP500_DY 12M_DACE_1_20_100'
+# var_name = 'GOV_GER_2Y_DACE_1_20_100'
+var_name = 'Corr_GOV_GER_10Y-GOV_JPN_10Y'
 
-#
 b = Variable(script_path=script_path,
              state_path=state_path,
              var_name=var_name)
+# b.update()
 
 b.write_dict()
 var_name2 = b.get_param('parents')
@@ -55,13 +66,17 @@ c = Variable(script_path=script_path,
              state_path=state_path,
              var_name=var_name2[0])
 c.write_dict()
-# d = Variable(script_path=script_path,
-#              state_path=state_path,
-#              var_name=var_name2[1])
-# d.write_dict()
-df = derivation_calculs.apply_operation(var_list=[c], freq='B', operation=operation, parameters=parameters)
+# #
+d = Variable(script_path=script_path,
+             state_path=state_path,
+             var_name=var_name2[1])
+d.write_dict()
+var_list = [c, d]
+
+df = derivation_calculs.apply_operation(var_list=var_list, freq='B', operation=operation, parameters=parameters)
+
 print '################################DF##########################################'
-print(df)
+# print(df)
 df.to_csv('x_test.csv')
 print compare_dfs.compare_two_dfs(dfx, df)
 

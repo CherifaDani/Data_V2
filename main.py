@@ -52,6 +52,30 @@ state_path = 'variable_state.csv'
 # var_name = 'CDS_GER_1Y'
 var_name = 'STR_USD_1D_Z5D'
 
+df1 = data_utils.load_var('1.csv', '1')
+df2 = data_utils.load_var('2.csv', '2')
+# df.set_index('')
+print(df1.shape, df2.shape)
+df3 = pd.concat([df1, df2], axis=1)
+print(df3.shape)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # var_name = 'CREDIT_CDS_GER_1Y'
@@ -64,13 +88,13 @@ var_name = 'STR_USD_1D_Z5D'
 #
 # c = Variable(script_path=script_path,
 #              state_path=state_path,
-#              var_name=var_name2)
-b = Variable(script_path=script_path,
-             state_path=state_path,
-             var_name=var_name)
-# path = '2 Data/1 Received/Market data/Base/CREDIT_CDS_GER_1Y.csv'
-# print(pd.read_csv(path))
-print b.update()
+# #              var_name=var_name2)
+# b = Variable(script_path=script_path,
+#              state_path=state_path,
+#              var_name=var_name)
+# # path = '2 Data/1 Received/Market data/Base/CREDIT_CDS_GER_1Y.csv'
+# # print(pd.read_csv(path))
+# print b.update()
 # c.write_dict()
 # b.write_dict()
 #

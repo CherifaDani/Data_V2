@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 import derivation_functions as dfunc
+import numpy as np
 
 glbnano = 86400000000000.0
 
@@ -27,20 +28,21 @@ def apply_operation(var_list, freq, operation, parameters):
             default: 'B'
  
     operation : {String type}
-                The derivation to apply to the var_list
+                The derivation to apply to the list of variables
  
     parameters : {Dict type}
                  The parameters of the derivation
 
     Return
     ------
-    fdf : {Dataframe type}
-            full dataframes,
-            Can be none if operation not found
+    output_df : {Dataframe type}
+            The output dataframe,
+            Is empty if operation not found
     """
-    fdf = pd.DataFrame()
+    output_df = pd.DataFrame()
+    # load dataframes
     dfs = map(lambda x: read_df(x), var_list)
-    var_names = map(lambda x: get_var_name(x), var_list)
+    # var_names = map(lambda x: get_var_name(x), var_list)
     idx0 = dfs[0]
     # var_name0 = var_names[0]
     idx1 = dfs[1] if len(list(dfs)) == 2 else None
@@ -50,39 +52,40 @@ def apply_operation(var_list, freq, operation, parameters):
         idx0 = idx1
         idx1 = idx0
 
-    # if 'shift' in parameters:
-    #     # décalage des dates pour tenir compte de la disponibilité réelle des données
-    #     # s'applique à toutes les colonnes d'un dataset
-    #     shift = parameters['shift']
-    #     if shift != 0 or freq is not None:
-    #         shifteddata = dfunc.apply_timeshift(idx0, shift=shift, freq=freq)
+    if 'shift' in parameters:
+
+        shift = parameters['shift']
+        if shift != 0 or freq is not None:
+            idx0 = dfunc.apply_timeshift(idx0, shift=shift, freq=freq)
+            if idx1 is not None:
+                idx1 = dfunc.apply_timeshift(idx1, shift=shift, freq=freq)
     if operation == 'timeshift':
         shift = parameters.get('shift', 0)
-        fdf = dfunc.apply_timeshift(idx0, freq, shift)
+        output_df = idx0
 
     elif operation == 'fillmissing':
         idxmain = parameters.get('main', 0)
         idxsubst = parameters.get('subst', 1)
-        fdf = dfunc.fill_missing_values(idxmain=idx0, idxsubst=idx1)
+        output_df = dfunc.fill_missing_values(idxmain=idx0, idxsubst=idx1)
 
     elif operation == 'combi':
         coeff1 = parameters.get('coeff1', 1)
         coeff2 = parameters.get('coeff2', 0)
         islinear = parameters.get('lin', True)
         transfo = parameters.get('transfo', None)
-        fdf = dfunc.apply_combi(df1=idx0, df2=idx1, coeff1=coeff1, coeff2=coeff2, islinear=islinear, transfo=transfo)
+        output_df = dfunc.apply_combi(df1=idx0, df2=idx1, coeff1=coeff1, coeff2=coeff2,
+                                islinear=islinear, transfo=transfo)
 
     elif operation == 'pctdelta':
         period = parameters.get('period', 1)
         ownfreq = parameters.get('freq', 'B')
-        fdf = dfunc.take_diff(idx0, period=period, ownfreq=ownfreq, inpct=True)
+        output_df = dfunc.take_diff(idx0, period=period, ownfreq=ownfreq, inpct=True)
 
     elif operation == 'delta':
         period = parameters.get('period', 1)
         ownfreq = parameters.get('freq', 'B')
-        fdf = dfunc.take_diff(df=idx0, period=period, inplace=False,
-                             inpct=False,
-                             ownfreq=freq)
+        output_df = dfunc.take_diff(df=idx0, period=period, inplace=False,
+                              inpct=False, ownfreq=freq)
 
     elif operation == 'rollingreturn':
         period = parameters.get('period', 1)
@@ -90,7 +93,7 @@ def apply_operation(var_list, freq, operation, parameters):
         iweek = parameters.get('iweek', 1)
         iday = parameters.get('iday', 1)
         iroll_interval = parameters.get('iroll_interval', 0)
-        fdf = dfunc.apply_rolling(maincol=idx0, substcol=idx1, rollfreq=rollfreq,
+        output_df = dfunc.apply_rolling(maincol=idx0, substcol=idx1, rollfreq=rollfreq,
                                   iweek=iweek, iday=iday, effectiveroll_lag=iroll_interval,
                                   inpct=True)
 
@@ -98,7 +101,7 @@ def apply_operation(var_list, freq, operation, parameters):
         emadecay = parameters.get('emadecay', 2.0 / (20 + 1))
         wres = parameters.get('wres', True)
         # wz = parameters.get('wZ', True)
-        fdf = dfunc.apply_ewma(df=idx0, emadecay=emadecay, wres=wres, inplace=True, normalize=True, stdev_min=1e-5, histoemadata=None)
+        output_df = dfunc.apply_ewma(df=idx0, emadecay=emadecay, wres=wres, inplace=True, normalize=True, stdev_min=1e-5, histoemadata=None)
 
     elif operation == 'futuresroll':
         rolldict = {'freq': parameters.get('freq', 'B'),
@@ -108,7 +111,7 @@ def apply_operation(var_list, freq, operation, parameters):
                     'bday_offset': parameters.get('bday_offset', 0),
                     'bmonth_offset': parameters.get('bmonth_offset', 0)
                     }
-        fdf = dfunc.apply_futures_roll(col_c1=idx0, col_c2=idx1, roll_dict=rolldict)
+        output_df = dfunc.apply_futures_roll(col_c1=idx0, col_c2=idx1, roll_dict=rolldict)
 
     elif operation == 'vol':
         period = parameters.get('period', 1)
@@ -116,7 +119,8 @@ def apply_operation(var_list, freq, operation, parameters):
         inpct = parameters.get('inpct', True)
         annualize = parameters.get('annualize', True)
         fillinit = parameters.get('fillinit', True)
-        fdf = dfunc.apply_vol(df=idx0, period=period, window=window, inpct=inpct, annualize=annualize, fillinit=fillinit)
+        output_df = dfunc.apply_vol(df=idx0, period=period, window=window, inpct=inpct,
+                              annualize=annualize, fillinit=fillinit)
 
     elif operation == 'ohlcvol':
         period = parameters['period']
@@ -126,7 +130,7 @@ def apply_operation(var_list, freq, operation, parameters):
         fillinit = parameters['fillinit']
         algo = parameters['algo']
         columns = parameters['columns']
-        fdf = dfunc.apply_ohlc_vol(df=idx0, OHLCcols=columns,
+        output_df = dfunc.apply_ohlc_vol(df=idx0, OHLCcols=columns,
                              window=window, inpct=inpct,
                              annualize=annualize,
                              fillinit=fillinit,
@@ -137,9 +141,9 @@ def apply_operation(var_list, freq, operation, parameters):
         lag = parameters.get('lag', 0)
         inpct = parameters.get('inpct', True)
         exponential = parameters.get('exponential', True)
-        fdf = dfunc.apply_corr(df1=idx0, df2=idx1, period=period, inpct=inpct,
+        output_df = dfunc.apply_corr(df1=idx0, df2=idx1, period=period, inpct=inpct,
                                lag=lag,
-                               exponential=exponential, span=window, cols=None)
+                               exponential=exponential, span=window)
     elif operation == 'delta_acorr':
         period = parameters.get('period', 0)
         shortwindow = parameters.get('shortwindow', 20)
@@ -148,11 +152,11 @@ def apply_operation(var_list, freq, operation, parameters):
         inpct = parameters.get('inpct', True)
         exponential = parameters.get('exponential', True)
         acorrshort = dfunc.apply_corr(df1=idx0, df2=idx0, period=period, inpct=inpct, lag=lag,
-                                      exponential=exponential, span=shortwindow, cols=None)
+                                      exponential=exponential, span=shortwindow)
         acorrlong = dfunc.apply_corr(df1=idx0, df2=idx0, period=period, inpct=inpct, lag=lag,
-                                     exponential=exponential, span=longwindow, cols=None)
-        fdf = pd.DataFrame(data=(acorrshort - acorrlong))
-        # fdf = acorrshort - acorrlong
+                                     exponential=exponential, span=longwindow)
+        output_df = pd.DataFrame(data=(acorrshort - acorrlong))
+        # output_df = acorrshort - acorrlong
         # print('accorshor:::{}'.format(acorrshort))
         # print('acorlong:::{}'.format(acorrlong))
     elif operation == 'cat':
@@ -164,41 +168,56 @@ def apply_operation(var_list, freq, operation, parameters):
         type_quant = parameters.get('type_quantilize', '')
         if type(levels) == list or levels > 0:
             if type_quant == 'auto':
-                fdf = auto_categorize(idx0, mod=10, date_end=dend, min_r=0.02)
+                output_df = dfunc.auto_categorize(idx0, mod=10, date_end=dend, min_r=0.02)
             else:
-                fdf = categorize(idx0, quantilize=quantilize, levels=levels,
+                output_df = dfunc.categorize(idx0, quantilize=quantilize, levels=levels,
                                  cols=catcols, dstart=dstart, dend=dend, inplace=False)
     elif operation == 'modifdur':
         maturity = parameters.get('maturity', 1)
 
     elif operation == 'cumret':
         timeweight = parameters.get('timeweight', False)
-        fdf = dfunc.apply_cumulative_return(df=idx0, timeweight=timeweight)
+        output_df = dfunc.apply_cumulative_return(df=idx0, timeweight=timeweight)
 
     elif operation == 'time':
-        pass
+        output_df = dfunc.time_columns(idx0)
 
     if 'mult' in parameters:
         mult = parameters['mult']
         if mult != 1:
-            return fdf * mult
+            return output_df * mult
 
     if 'lag' in parameters:
         lag = parameters['lag']
         if lag != 0:
-            return dfunc.apply_lag(fdf, lag=lag, freq=freq)
+            return dfunc.apply_lag(output_df, lag=lag, freq=freq)
     if 'add' in parameters:
         add = parameters['add']
         if add != 0:
-            return fdf + parameters['add']
+            return output_df + parameters['add']
 
     if 'power' in parameters:
         power = parameters['power']
-
+        if power != 1:
+            # pdb.set_trace()
+            df = output_df ** power
+            output_df = pd.DataFrame(index=df.index, data=df.values, columns=df.columns)
     if 'levels' in parameters and operation != 'cat' :
         if levels > 0:
             quantilize = parameters['quantilize']
             dstart = parameters['dstart']
             catcols = parameters['catcols']
             dend = parameters['dend']
-    return fdf
+            output_df = dfunc.categorize(quantilize=quantilize, levels=levels,
+                                   cols=catcols, dstart=dstart, dend=dend)
+    if 'apply_filter' in parameters:
+        if parameters['apply_filter'] is True:
+            period = parameters.get('period', 0)
+            min_value = parameters.get('min_value', np.NINF)
+            max_value = parameters.get('max_value', np.inf)
+            diff_order = parameters.get('diff_order', 1)
+            inpct = parameters.get('inpct', True)
+            output_df = dfunc.apply_filter(idx0, period=period, min_value=min_value,
+                                     max_value=max_value, diff_order=diff_order,
+                                     inpct=inpct, inplace=True, cols=None)
+    return output_df

@@ -189,7 +189,33 @@ def get_columns(df, cols=None, forceuppercase=True):
             return []
 
 
-def apply_timeshift(df, var_name, shift=1, freq='B', ownfreq=None, refdate=None):
+def apply_timeshift(df, shift=1, freq='B', ownfreq=None, refdate=None):
+    """
+    This function returns a copy of the current dataframe, with translated dates of a delay(shift).
+
+    Parameters
+    ----------
+    df : {Dataframe type}
+          The input dataframe
+    shift : {Integer type}
+
+    freq : {Char type}
+            The offset unit of the shift, default: 'B'
+    ownfreq : {Char type}
+               represents the final frequency of the DF
+               default: None
+    refdate : {Datetime type}
+              Date of calculation. If provided,
+              the offsets are limited to this date
+
+    Return
+    ------
+    A shifted dataframe
+    """
+    """
+            Date shift to reflect actual data availability
+            Applied to all columns in a dataframe
+            """
     '''Renvoie une copie de l'objet courant, avec dates translatées d'un délai. '''
     '''Les noms de colonnes de l'objet courant ne sont pas modifiés.'''
     '''freq représente l''unité de compte du décalage'''
@@ -197,22 +223,22 @@ def apply_timeshift(df, var_name, shift=1, freq='B', ownfreq=None, refdate=None)
     '''refdate: date de calcul. si fournie, les décalages sont limités à cette date'''
     '''Exemple: décaler de 20j une série trimestrielle'''
 
-    newdataset = df.copy()
+    new_df = df.copy()
 
     # pas de décalage: on peut changer la fréquence
     # if freq <> 'B':
     if ownfreq is not None and ownfreq != freq:
         pass
-        # newdataset=newdataset.change_freq(freq=ownfreq)
+        # new_df=new_df.change_freq(freq=ownfreq)
     if shift == 0:
-        return newdataset
+        return new_df
 
     if refdate is None:
         refdate = datetime.now()
     else:
         refdate = pd.to_datetime(refdate)
 
-    ndf = newdataset.tshift(shift, freq)
+    ndf = new_df.tshift(shift, freq)
 
     # sous-typer en TDataSet
     # Vérifier que l'on ne décale pas au-delà d'aujourd'hui
@@ -223,29 +249,37 @@ def apply_timeshift(df, var_name, shift=1, freq='B', ownfreq=None, refdate=None)
         ndf = ndf[ndf.index < refdate]
         ndf = ndf.append(newline)
 
-    ndf.columns = [var_name]
+    ndf.columns = ['SHIFT']
     return ndf
 
 
 def apply_combi(df1, df2, coeff1=1, coeff2=0, constant=0,
                 islinear=True, transfo=None):
     '''Renvoie la combinaison linéaire ou exponentielle de deux colonnes. '''
-    df1, df2 = reindex(df1, df2)
-    # df = pd.concat([df1, df2], axis=1)
-    cols1 = get_columns(df1)
+    # df1, df2 = reindex(df1, df2, {method: 'nearest'})
+
+    df = pd.concat([df1, df2], axis=1)
+    df = df.fillna(method='ffill')
+    # df = df1.merge(df2, left_index=True, right_index=True)
+
+    df.columns = ['df1', 'df2']
+    cols1 = get_columns(df)
+
     if len(cols1) > 0:
         col1 = cols1[0]
-        datacol1 = df1
+        print(col1)
+        datacol1 = df[col1]
+
     else:
         datacol1 = None
 
-    cols2 = get_columns(df2)
+    cols2 = get_columns(df)
     if len(cols2) > 0:
-        col2 = cols2[0]
-        datacol2 = df2
+        col2 = cols2[1]
+        datacol2 = df[col2]
+
     else:
         datacol2 = None
-
     c1null = c1one = c1neg = c2null = c2one = c2neg = False
     if coeff1 == 0 or datacol1 is None:
         c1null = True
@@ -259,13 +293,12 @@ def apply_combi(df1, df2, coeff1=1, coeff2=0, constant=0,
         c2one = True
     if coeff2 < 0:
         c2neg = True
-    # [datacol1, datacol2] = reindex(datacol1, datacol2)
 
-    # df = pd.DataFrame()
     if islinear:
-        combiarray = np.zeros(len(df1.index)) + constant
+        combiarray = np.zeros(len(df.index)) + constant
         if not c1null:
             combiarray = datacol1.values * coeff1 + constant
+
         if not c2null:
             combiarray = combiarray + datacol2.values * coeff2
 
@@ -274,21 +307,20 @@ def apply_combi(df1, df2, coeff1=1, coeff2=0, constant=0,
         # constante égale à 0 en multiplicatif: on la prend pour 1
         if constant == 0:
             constant = 1
-        combiarray = np.ones(len(df1.index)) * constant
+        combiarray = np.ones(len(df.index)) * constant
 
         if (datacol1 is not None):
             combiarray = np.power(datacol1.values, coeff1) * constant
         if (datacol2 is not None):
             combiarray = combiarray * np.power(datacol2.values, coeff2)
-
     if transfo is not None:
         if str(transfo).lower() == 'tanh':
             combiarray = np.tanh(combiarray)
         elif str(transfo).lower() == 'sign':
             combiarray = np.sign(combiarray)
-    newdataset = pd.DataFrame(index=df1.index, data=combiarray)
-    newdataset.columns = ['COMBI']
-    return newdataset
+    new_df = pd.DataFrame(index=df.index, data=combiarray)
+    new_df.columns = ['COMBI']
+    return new_df
 
 
 def take_columns(df, cols=None, forceuppercase=True):
@@ -342,15 +374,15 @@ def apply_ewma(df, emadecay=None, span=1, inplace=True,
 
     cols = get_columns(df, cols)
     # cols = df.columns
-    # if not(col in self.columns) : return newdataset
+    # if not(col in self.columns) : return new_df
     # import pdb; pdb.set_trace()
     # extraction des données à moyenner dans un DataFrame
     datacols = pd.DataFrame(data=df[cols])
     if inplace:
-        newdataset = df
+        new_df = df
     else:
-        newdataset = df.copy()
-        newdataset = newdataset.take_columns(cols)
+        new_df = df.copy()
+        new_df = new_df.take_columns(cols)
     # calculer la période synthétique correspondant au coeff s'il est fourni
     if type(emadecay) in [int, float]:
         if emadecay > 0:
@@ -377,7 +409,7 @@ def apply_ewma(df, emadecay=None, span=1, inplace=True,
     else:
         # recalcul de la totalité des données de l'ema
         emadata = pd.ewma(datacols, span=span, adjust=True)
-        newdataset = emadata
+        new_df = emadata
      # calcul du résidu
     if wres:
         rescols = df[cols] - emadata
@@ -388,32 +420,49 @@ def apply_ewma(df, emadecay=None, span=1, inplace=True,
             zcols = rescols * 0.0
             zcols[stdevcols > 0] = rescols[stdevcols > 0] / stdevcols[stdevcols > 0]
         for col in cols:
-            newdataset[col] = emadata[col]
+            new_df[col] = emadata[col]
             if wres:
-                newdataset[col] = rescols[col]
+                new_df[col] = rescols[col]
                 if normalize:
-                    newdataset[col] = zcols[col]
+                    new_df[col] = zcols[col]
 
-    newdataset.columns = ['EWMA']
-    return newdataset
+    new_df.columns = ['EWMA']
+    return new_df
 
 
 def apply_corr(df1, df2, period=1,
                span=20, exponential=True,
-               inpct=True, cols=None, lag=0):
+               inpct=True, lag=0):
     '''Renvoie la série des corrélations entre deux colonnes d'un Dataset
        period: si 0, corrélation des valeurs, si > 0, corrélation des variations sur period
        lag2: retard sur la seconde colonne
        cols: spécifications de 1 ou 2 colonnes
     '''
+    # hm_time = df2.index[0]
+    #
+    # df1 = set_daytime(df1, hm_time=hm_time)
+    # # print(df1)
+    # df1.columns = ['df']
+    # df2.columns = ['df']
+    idx_all = pd.bdate_range(start=df2.index[0], end=df2.index[-1], freq='B')
+    # effacer l'heure pour synchronisation
+    df1 = set_daytime(df1, datetime(2000, 1, 1))
+    df2 = set_daytime(df2, datetime(2000, 1, 1))
+    # élargir le calendrier pour inclure les dates de rolls de façon certaine
+    # df1 = df1.reindex(index=idx_all, method=None)
     df = pd.concat([df1, df2], axis=1)
+    df = df.fillna(method='ffill')
+    df.columns = ['df1', 'df2']
+
     cols = get_columns(df)
     if len(cols) == 1:
         col1 = cols[0]
         col2 = col1
+
     else:
         col1 = cols[0]
         col2 = cols[1]
+
     # #  si period == 0 c'est l'autocorrélation des valeurs
     # #  et non des variations qui est calculée
     startval = period + lag * period
@@ -431,14 +480,12 @@ def apply_corr(df1, df2, period=1,
             data1 = df[col1].diff(period)[startval:]
             data2 = df[col2].diff(period).shift(periods=lag * period)[startval:]
 
-    if not exponential:
+    if exponential:
         corrdata = pd.ewmcorr(data1[startval:], data2[startval:], span=span)
     else:
         corrdata = pd.rolling_corr(data1, data2, window=span)
-    # print(corrdata)
-    # newdataset = corrdata
 
-    newdataset = pd.DataFrame(index=df.index, data=corrdata)
+    newdataset = pd.DataFrame(index=df.index, data=(corrdata))
     newdataset.columns = ['CORR']
 
     return newdataset
@@ -553,8 +600,7 @@ def take_diff(df, period=1, inplace=False, cols=None, inpct=True,
         newdataset = df
     else:
         newdataset = None
-    if fieldsep == '':
-        fieldsep = glbFieldSep
+
     cols = get_columns(df, cols)
     # if not(col in self.columns) : return newdataset
     # import pdb; pdb.set_trace()
@@ -624,6 +670,7 @@ def apply_rolling(maincol, substcol,  rollfreq, iday, iweek, effectiveroll_lag=0
     period = 1
     assert effectiveroll_lag in [0, 1]
     df = pd.concat([maincol, substcol], axis=1)
+    df = df.fillna(method='ffill')
     cols = get_columns(df)
     if cols is None:
         return None
@@ -810,7 +857,8 @@ def apply_futures_roll(col_c1, col_c2, roll_dict):
             RETURN_1D_AFTER_ROLL: the daily roll-adjusted return
             """
     df = pd.concat([col_c1, col_c2], axis=1)
-    df.dropna(inplace=True)
+    df = df.fillna(method='ffill')
+    # df.dropna(inplace=True)
     h_c1, m_c1, s_c1 = df.index[0].hour, df.index[0].minute, df.index[0].second
     dstart = df.index[0].replace(hour=h_c1, minute=m_c1, second=s_c1)
     dend = df.index[-1].replace(hour=h_c1, minute=m_c1, second=s_c1)
@@ -986,6 +1034,186 @@ def auto_categorize(df, mod=10, level_date=None, date_end=None, min_r=0.02):
         return np.nan  # , len(bins)-1, bins
 
 
+def categorize(df, quantilize=False, levels=2,
+               cols=None, dstart=None, dend=None):
+    '''Renvoie la série des colonnes catégorisées; levels: entier ou tableau.'''
+
+    new_df = df.copy()
+
+    cols = get_columns(new_df, cols)
+    # #         if dstart is None: dstart=self.index [0]
+    # #         if dend is None: dend=self.index [-1]
+
+    if type(levels) == int:
+        nlevels = levels
+        if nlevels > 0:
+            levels = np.array(range(0, 1 + nlevels, 1)) * float(1.0 / nlevels)
+    else:
+        nlevels = len(levels)
+
+    for col in cols:
+        if quantilize:
+
+            subseries = take_columns(new_df, col)
+            subseries = take_interval(subseries, dstart=dstart, dend=dend)  # , inplace=True)
+            subseries = subseries.dropna()
+            if len(subseries) < 10:
+                logger.info('!! pas assez de donnée pour la quantilisation pour %s !!')
+                return
+            levels[0] = -1000000000.0
+            levels[-1] = 1000000000.0
+            for ilevel in range(1, nlevels):
+                levels[ilevel] = subseries.quantile(float(ilevel) / nlevels)
+            levels = np.unique(levels)
+
+        catcol = pd.cut(x=new_df[col], bins=levels, labels=False)
+        # new_df[new_df[colname] < 0] = np.NaN
+
+    new_df.columns = ['cat']
+    return new_df
+
+
+def take_interval(df, dstart=None, dend=None, inplace=False):
+        ''' Prend une tranche temporelle [dstart, dend] '''
+        ''' cas normal: type(dstart) == type(dend) == str'''
+        # pdb.set_trace()
+        if len(df.index) == 0:
+            return df
+        if dstart is None or dstart == '':
+            dstart = df.index[0]
+        else:
+            dstart = pd.to_datetime(dstart)
+
+        if dend is None or dend == '':
+            dend = df.index[-1]
+        else:
+            dend = pd.to_datetime(dend)
+
+        if (dstart <= df.index[0]) and (dend >= df.index[-1]):
+            return df
+
+        if inplace:
+            # ds=self._as_TDataSet(self [str(dstart) : str(dend)])
+            ds = df.loc[df.index <= str(dend)]
+            ds = df.loc[df.index >= str(dstart)]
+        else:
+            # modif a confirmer
+            ds = pd.DataFrame(data=df[str(dstart): dend.strftime("%Y-%m-%d")])
+        return ds
+
+
+def calc_modified_duration(df, n, cols=None):
+    ''' Renvoie la série des sensibilités=modified duration'''
+    ''' Pour une série de taux et une maturité '''
+
+    cols = take_columns(df, cols)
+    cols = np.maximum(cols, 1e-5)
+    zc = 1.0 / (1.0 + cols)
+    zcn = zc ** n
+    res = 1.0
+    res -= (n + 1.0) * zcn
+    u = (1.0 - zcn)
+    u /= (1.0 - zc)
+    u *= zc
+    res += u
+    res /= zc
+    res += n * zcn / zc
+    res *= - zc * zc
+
+    tabcols = df.columns.values
+
+    res.columns = tabcols
+    return df(res)
+
+
+def time_columns(df):
+    '''Calcule les variables de saisonnalité directes et décalées '''
+    ds = pd.DataFrame(index=df.index,
+                      columns=[glbMetaVarPrefix + 'DATE', 'MOIS', 'MOIS_', 'JMOIS', 'JMOIS_', 'JSEM', 'JSEM_'])
+    ds[glbMetaVarPrefix + 'DATE'] = df.index.year * 10000 + self.index.month * 100 + df.index.day
+    ds['MOIS'] = df.index.month
+    ds['MOIS_'] = (df.index.month + 6) % 12
+    ds['JMOIS'] = df.index.day
+    ds['JMOIS_'] = (df.index.day + 15) % 31
+    ds['JSEM'] = (np.rint(df.index.asi8 / glbNanoSexPerDay)) % 7
+    ds['JSEM_'] = (np.rint(df.index.asi8 / glbNanoSexPerDay) + 3) % 7
+    return ds
+
+
+def apply_filter(df, period=1, min_value=np.NINF, max_value=np.inf, diff_order=1, inpct=True,
+                 cols=None):
+    #  Renvoie une copie de l'objet courant en annulant les valeurs abbérentes correspondant à des rendements
+    #  ou à des valeurs en dehors des limites min_value et max_value
+
+    cols = get_columns(df, cols)
+    datacols = df[cols]
+
+    #  On cherche first_date=première date contenant des données
+    first_date = min(datacols.dropna(axis=0, how='any', inplace=False).index)
+
+    #  Et first_value la première valeur associée
+    first_value = datacols.loc[first_date][:]
+
+    #  On nettoie ensuite le dataframe datacols
+    datacols = datacols[datacols.index != pd.NaT]
+    datacols = datacols[datacols.index != pd.NaT]
+    datacols.dropna(axis=0, how='all', inplace=True)
+
+    #  On calcule la série des rendements géo si inpct=True
+    if diff_order != 0:
+        if inpct:
+            delta_data = datacols.pct_change(period)
+
+        #  Sinon on calcule la série des rendements arithmétiques
+        else:
+            delta_data = datacols.diff(period)
+    else:
+        delta_data = datacols
+
+    #  On retouche les valeurs au-dessus en en-dessous des limites
+    if diff_order != 0:
+        #  les rendements sont annulés en dehors des limites
+        delta_data[delta_data < min_value] = 0
+        delta_data[delta_data > max_value] = 0
+
+    else:
+        #  Dans le cas de l'ordre 0 on écrase les valeurs
+        #  au-dessus des seuils et fait un fwd fill
+        delta_data[delta_data < min_value] = np.nan
+        delta_data[delta_data > max_value] = np.nan
+
+        #  Il faut traiter le cas particulier où la première valeur
+        #  rencontrée dépassait les limites, on fait un np.clip
+        #  de cette première valeur que l'on propage en fwd fill
+        if (any(np.isnan(delta_data.loc[first_date][:]))):
+            fill_value = np.clip(first_value, min_value, max_value)
+            delta_data.loc[first_date][:] = fill_value
+
+        delta_data.fillna(method='ffill', inplace=True)
+
+    #  On recontruit les NAVs à partir des rendements
+    #  Si on n'est pas à l'ordre 0
+    if diff_order != 0:
+        if inpct:
+            delta_data = np.log(1 + delta_data)
+
+        delta_data = pd.expanding_sum(delta_data)
+
+        #  Dans le cas de rendements géométriques, on recalcule une NAV en normalisant
+        #  avec la première valeur valide rencontrée pour la série
+        if inpct:
+            delta_data = np.exp(delta_data)
+            delta_data = delta_data.multiply(first_value, axis=1)
+
+        #  Dans le cas de rendements arithmétiques, la normalisation se fait par addition
+        else:
+            delta_data = delta_data.add(first_value, axis=1)
+
+    newdataset = pd.DataFrame(index=delta_data.index,
+                          data=delta_data.values,
+                          columns=cols)
+
+    return newdataset
 # def apply_ohlc_vol(df,
 #                    window=20,
 #                    annualize=True,
