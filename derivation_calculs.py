@@ -156,9 +156,7 @@ def apply_operation(var_list, freq, operation, parameters):
         acorrlong = dfunc.apply_corr(df1=idx0, df2=idx0, period=period, inpct=inpct, lag=lag,
                                      exponential=exponential, span=longwindow)
         output_df = pd.DataFrame(data=(acorrshort - acorrlong))
-        # output_df = acorrshort - acorrlong
-        # print('accorshor:::{}'.format(acorrshort))
-        # print('acorlong:::{}'.format(acorrlong))
+
     elif operation == 'cat':
         quantilize = parameters.get('quantilize', False)
         levels = parameters.get('levels', [-1000, 0, 1000])
@@ -174,7 +172,7 @@ def apply_operation(var_list, freq, operation, parameters):
                                  cols=catcols, dstart=dstart, dend=dend, inplace=False)
     elif operation == 'modifdur':
         maturity = parameters.get('maturity', 1)
-
+        output_df = dfunc.calc_modified_duration(idx0, n=maturity)
     elif operation == 'cumret':
         timeweight = parameters.get('timeweight', False)
         output_df = dfunc.apply_cumulative_return(df=idx0, timeweight=timeweight)

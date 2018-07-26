@@ -233,7 +233,7 @@ def load_var(path, var_name, times_series=False, round=False):
 
     Return
     ------
-    : {Series type}
+    df : {Dataframe type}
     """
     # test if the path is to a file...
     if os.path.isfile(path):
