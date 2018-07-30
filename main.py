@@ -34,14 +34,14 @@ from compare_dfs import compare_two_dfs
 # # import derivation_calculs
 # sys.path.append(r'/home/cluster')
 # with PyCallGraph(output=graphviz):
-script_path = 'CM.xlsx'
+# script_path = 'CM.xlsx'
 # var_name = 'Corr_VIX_LAST-WTI'
-# # var_name = 'Corr_GSCI-Gold'
-# # var_name = 'STR_USD_1D'
+# var_name = 'Corr_GSCI-Gold'
+# var_name = 'STR_USD_1D'
 # var_name = 'Spread_CDS_CHN_5Y-CDS_USA_5Y'
 # var_name = 'STR_USD_1D_DACE_1_20_100'
 # state_path = 'x.csv'
-state_path = 'variable_state.csv'
+# state_path = 'variable_state.csv'
 # var_name = 'FUT_EURUSD_RET1C1'
 # var_name = 'STR_USD_1M'
 # var_name = 'Spread_SWAP_USD_1Y-GOV_USA_1Y'
@@ -50,23 +50,22 @@ state_path = 'variable_state.csv'
 # var_name = 'FUT_BUND_TREND6M'  # complex variable ==> futures_roll
 # var_name = 'CDS_GER_1Y_Z250D'
 # var_name = 'CDS_GER_1Y'
-var_name = 'STR_USD_1D_Z5D'
+# var_name = 'STR_USD_1D_Z5D'
+#
+df1 = data_utils.load_var('compare/1.csv', '1')
+df2 = data_utils.load_var('compare/2.csv', '2')
+print compare_two_dfs(df1, df2)
+# # df.set_index('')
+# print(df1.shape, df2.shape)
+# df3 = pd.concat([df1, df2], axis=1)
+# print(df3.shape)
+# x = df1.columns[1]
+# print(x)
+# print(df1[x])
 
-df1 = data_utils.load_var('1.csv', '1')
-df2 = data_utils.load_var('2.csv', '2')
-# df.set_index('')
-print(df1.shape, df2.shape)
-df3 = pd.concat([df1, df2], axis=1)
-print(df3.shape)
-
-
-
-
-
-
-
-
-
+# col_out = [0]
+# output_df = df1[df1.columns[col_out]]
+# print(output_df)
 
 
 

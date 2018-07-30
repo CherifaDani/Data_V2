@@ -552,8 +552,6 @@ def apply_ewma(df, emadecay=None, span=1, inplace=True,
                 new_df[col] = rescols[col]
                 if normalize:
                     new_df[col] = zcols[col]
-
-    new_df.columns = ['EWMA']
     return new_df
 
 
@@ -779,7 +777,7 @@ def apply_vol(df,
         new_df[col] = voldata[voldata.columns[icol]] * annfactor
 
     # new_df.columns = newcols
-    new_df.columns = ['VOL']
+    # new_df.columns = ['VOL']
     print(new_df)
     return new_df
 
@@ -1094,8 +1092,8 @@ def apply_lag(df, lag=1, freq='B', cols=None, inplace=False):
             new_df[col] = laggedseries[col]
     else:
         new_df = pd.DataFrame(index=laggedseries.index,
-                                  data=laggedseries.values,
-                                  columns=cols)
+                              data=laggedseries.values,
+                              columns=cols)
 
     # idx_all = pd.bdate_range(start=df.index[0], end=df.index[-1], freq=freq)
     # new_df = new_df.reindex(index=idx_all, method=None)
@@ -1334,11 +1332,12 @@ def fill_missing_values(idxmain, idxsubst, dfsubst=None):
 
 
 def apply_ohlc_vol(df, OHLCcols=None,
-                             window=20, inpct=True,
-                             annualize=True,
-                             fillinit=True,
-                             algo='yang'):
+                       window=20, inpct=True,
+                     annualize=True,
+                     fillinit=True,
+                     algo='yang'):
     '''Renvoie la série des volatilités de rendements '''
+    pass
 
 
 def auto_categorize(df, mod=10, level_date=None, date_end=None, min_r=0.02):

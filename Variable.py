@@ -444,13 +444,9 @@ class Variable(object):
             # logger.warn('{} {} {}'.format(path, operation,
             #                              self.get_param('var_type')))
             map(lambda x: x.update(), var_list)
-            print self.deriv_var(var_list, operation, derived_params)
-            # print ('df_calc: {}'.format(map(lambda x: x.deriv_var(var_list, operation, derived_params), var_list)))
-            # var.update()
-            # save to csv
-            # df_calc.to_csv(self.get_param('path'))
-            # df_calc.to_csv('x.csv')
-            # logger.info('saved to x.csv')
+            self.deriv_var(var_list, operation, derived_params)
+            # last_update
+            # map(lambda x: x.write_state_var(), var_list)
         return var_list
 
     def update(self):
@@ -484,6 +480,13 @@ class Variable(object):
                                                      operation,
                                                      derived_params)
         path = self.get_param('path')
+
         if df_calc is not None:
             data_utils.write_zip(path)
             df_calc.to_csv(path)
+            print('********************************df_calc***********************!:::::{}'.format(df_calc))
+            # last_update = df_calc.index[-1]
+            # updating the date of the last_update
+            # self.set_params(last_update=last_update)
+            # self.write_state_var()
+            # return last_update

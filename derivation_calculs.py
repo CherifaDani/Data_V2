@@ -51,7 +51,10 @@ def apply_operation(var_list, freq, operation, parameters):
     if col1 == 1:
         idx0 = idx1
         idx1 = idx0
-
+    colout = parameters.get('col_out', None)
+    # print('colout')
+    # print(type(colout))
+    # print(colout)
     if 'shift' in parameters:
 
         shift = parameters['shift']
@@ -74,7 +77,7 @@ def apply_operation(var_list, freq, operation, parameters):
         islinear = parameters.get('lin', True)
         transfo = parameters.get('transfo', None)
         output_df = dfunc.apply_combi(df1=idx0, df2=idx1, coeff1=coeff1, coeff2=coeff2,
-                                islinear=islinear, transfo=transfo)
+                                      islinear=islinear, transfo=transfo)
 
     elif operation == 'pctdelta':
         period = parameters.get('period', 1)
@@ -85,7 +88,7 @@ def apply_operation(var_list, freq, operation, parameters):
         period = parameters.get('period', 1)
         ownfreq = parameters.get('freq', 'B')
         output_df = dfunc.take_diff(df=idx0, period=period, inplace=False,
-                              inpct=False, ownfreq=freq)
+                                    inpct=False, ownfreq=freq)
 
     elif operation == 'rollingreturn':
         period = parameters.get('period', 1)
@@ -94,14 +97,15 @@ def apply_operation(var_list, freq, operation, parameters):
         iday = parameters.get('iday', 1)
         iroll_interval = parameters.get('iroll_interval', 0)
         output_df = dfunc.apply_rolling(maincol=idx0, substcol=idx1, rollfreq=rollfreq,
-                                  iweek=iweek, iday=iday, effectiveroll_lag=iroll_interval,
-                                  inpct=True)
+                                        iweek=iweek, iday=iday, effectiveroll_lag=iroll_interval,
+                                        inpct=True)
 
     elif operation == 'ewma':
         emadecay = parameters.get('emadecay', 2.0 / (20 + 1))
         wres = parameters.get('wres', True)
         # wz = parameters.get('wZ', True)
-        output_df = dfunc.apply_ewma(df=idx0, emadecay=emadecay, wres=wres, inplace=True, normalize=True, stdev_min=1e-5, histoemadata=None)
+        output_df = dfunc.apply_ewma(df=idx0, emadecay=emadecay, wres=wres, inplace=True,
+                                     normalize=True, stdev_min=1e-5, histoemadata=None)
 
     elif operation == 'futuresroll':
         rolldict = {'freq': parameters.get('freq', 'B'),
@@ -120,7 +124,7 @@ def apply_operation(var_list, freq, operation, parameters):
         annualize = parameters.get('annualize', True)
         fillinit = parameters.get('fillinit', True)
         output_df = dfunc.apply_vol(df=idx0, period=period, window=window, inpct=inpct,
-                              annualize=annualize, fillinit=fillinit)
+                                    annualize=annualize, fillinit=fillinit)
 
     elif operation == 'ohlcvol':
         period = parameters['period']
@@ -131,10 +135,10 @@ def apply_operation(var_list, freq, operation, parameters):
         algo = parameters['algo']
         columns = parameters['columns']
         output_df = dfunc.apply_ohlc_vol(df=idx0, OHLCcols=columns,
-                             window=window, inpct=inpct,
-                             annualize=annualize,
-                             fillinit=fillinit,
-                             algo=algo)
+                                         window=window, inpct=inpct,
+                                         annualize=annualize,
+                                         fillinit=fillinit,
+                                         algo=algo)
     elif operation == 'corr':
         period = parameters.get('period', 0)
         window = parameters.get('window', 20)
@@ -142,8 +146,8 @@ def apply_operation(var_list, freq, operation, parameters):
         inpct = parameters.get('inpct', True)
         exponential = parameters.get('exponential', True)
         output_df = dfunc.apply_corr(df1=idx0, df2=idx1, period=period, inpct=inpct,
-                               lag=lag,
-                               exponential=exponential, span=window)
+                                     lag=lag,
+                                     exponential=exponential, span=window)
     elif operation == 'delta_acorr':
         period = parameters.get('period', 0)
         shortwindow = parameters.get('shortwindow', 20)
@@ -169,7 +173,7 @@ def apply_operation(var_list, freq, operation, parameters):
                 output_df = dfunc.auto_categorize(idx0, mod=10, date_end=dend, min_r=0.02)
             else:
                 output_df = dfunc.categorize(idx0, quantilize=quantilize, levels=levels,
-                                 cols=catcols, dstart=dstart, dend=dend, inplace=False)
+                                             cols=catcols, dstart=dstart, dend=dend, inplace=False)
     elif operation == 'modifdur':
         maturity = parameters.get('maturity', 1)
         output_df = dfunc.calc_modified_duration(idx0, n=maturity)
@@ -179,7 +183,26 @@ def apply_operation(var_list, freq, operation, parameters):
 
     elif operation == 'time':
         output_df = dfunc.time_columns(idx0)
+    #
+    # if type(colout) == 'int':
+    #     # else:
+    #     col = output_df.columns[colout]
+    #     output_df = output_df[col]
+    # elif type(colout) == 'str':
+    #     #     col = colout[0]
+    #     #     output_df = output_df[col]
+    #     # else:
+    #     output_df = output_df[colout]
+    # elif type(colout) == 'list':
+    #     output_df = output_df[output_df.columns[colout]]
+        # output_df = output_df.loc[:, output_df.columns.isin(colout)]
 
+        # col = colout[0]
+        # print('col {}'.format(col))
+        # output_df = output_df[col]
+    # else:
+    #     output_df = output_df
+    # print(output_df)
     if 'mult' in parameters:
         mult = parameters['mult']
         if mult != 1:
@@ -200,14 +223,14 @@ def apply_operation(var_list, freq, operation, parameters):
             # pdb.set_trace()
             df = output_df ** power
             output_df = pd.DataFrame(index=df.index, data=df.values, columns=df.columns)
-    if 'levels' in parameters and operation != 'cat' :
+    if 'levels' in parameters and operation != 'cat':
         if levels > 0:
             quantilize = parameters['quantilize']
             dstart = parameters['dstart']
             catcols = parameters['catcols']
             dend = parameters['dend']
             output_df = dfunc.categorize(quantilize=quantilize, levels=levels,
-                                   cols=catcols, dstart=dstart, dend=dend)
+                                         cols=catcols, dstart=dstart, dend=dend)
     if 'apply_filter' in parameters:
         if parameters['apply_filter'] is True:
             period = parameters.get('period', 0)
@@ -216,6 +239,6 @@ def apply_operation(var_list, freq, operation, parameters):
             diff_order = parameters.get('diff_order', 1)
             inpct = parameters.get('inpct', True)
             output_df = dfunc.apply_filter(idx0, period=period, min_value=min_value,
-                                     max_value=max_value, diff_order=diff_order,
-                                     inpct=inpct, inplace=True, cols=None)
+                                           max_value=max_value, diff_order=diff_order,
+                                           inpct=inpct, inplace=True, cols=None)
     return output_df
