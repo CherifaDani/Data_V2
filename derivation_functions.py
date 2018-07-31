@@ -153,6 +153,21 @@ def estimate_nat_freq(df, col):
                     fdict['pct95'] = deltat.ix[int(0.95 * length) - 1]
     return fdict
 
+#
+# def set_calendar(df, start, end, freq='B', forcereset=False):
+#     # création d'un index de dates
+#     try:
+#         rng = pd.bdate_range(start=start, end=end, freq=freq)
+#     except:
+#         return df
+#     try:
+#         df[start: end]
+#         if forcereset or \
+#                 np.datetime64(start) < np.datetime64(df.index[0]) or \
+#                 np.datetime64(end) > np.datetime64(df.index[-1]):
+#     # except:
+#     #     TDataSet.__i
+
 
 def get_columns(df, cols=None, forceuppercase=True):
     """
@@ -295,6 +310,84 @@ def apply_timeshift(df, shift=1, freq='B', ownfreq=None, refdate=None):
     return ndf
 
 
+def min_day_interval(df):
+    deltadays = (df.index.asi8[1:] - df.index.asi8[: -1]) / glbnano
+    return np.rint(deltadays).min()
+
+
+def index_df(df1, df2):
+    fillmethod = 'ffill'
+    value = None
+    newds = df1
+    if isinstance(newds, (pd.TimeSeries, pd.Series, pd.DataFrame)):
+
+        #  Vérification des critères
+
+        if len(df1.index) == 0:
+            self = newds.copy()
+            for col in self.columns:
+                # self [col].delete()
+                del df1[col]
+        else:
+            #  df=self.join(newds,  how='outer')
+            #  pdb.set_trace()
+            if newds.index[0] < df1.index[0] or \
+                    newds.index[-1] > df1.index[-1]:
+                newdend = newds.index[-1]
+                selfend = df1.index[-1]
+                if newdend.day == selfend.day and \
+                        newdend.month == selfend.month and \
+                        newdend.year == selfend.year:
+                    newdend = newdend + pd.Timedelta(hours=selfend.hour - newdend.hour,
+                                                     minutes=selfend.minute - newdend.minute,
+                                                     seconds=selfend.second - newdend.second)
+
+                newds = take_interval(newds, dstart=df1.index[0],
+                                      dend=newdend, inplace=True)
+
+        try:
+
+            if fillmethod == 'auto':
+                mindeltas = min_day_interval(newds)
+                mindelta = min_day_interval(df1)
+                #  Réindexation dans une série existante: on compare les fréquences
+
+                if mindeltas == mindelta:
+                    #  Si la nouvelle série a la même fréquence que la série hôte
+                    if pd.isnull(value):
+                        #  pas de valeur de remplissage: ajuster les index en ne remontant pas au delà de la fréquence native
+                        #  Commencer par être sévère pour empêcher le remplissage de vraies valeurs manquantes
+                        # CG 26 Oct 15
+                        # mindelta au lieu de mindelta - 1
+                        newds2 = newds.reindex(index=df1.index, method='ffill', limit=mindelta)
+                        newds2[newds2.index.date > newds.index[-1].date()] = np.nan
+                        # newds2[newds2.index > newds.index [-1]]=np.nan
+                        # CG 8 Dec 15
+                        # empêcher le prolongement de la série au-delà de la série d'origine
+                        #  si on perd trop de données, cas d'une série japonaise 9h30: aller chercher les données du matin
+                        if len(newds2.dropna()) < len(newds.index) / 2.0:
+                            newds2 = newds.reindex(index=df1.index, method='ffill')
+                    else:
+
+                        newds2 = newds.reindex(index=df1.index, fill_value=value)
+                else:
+                    if pd.isnull(value):
+                        newds2 = newds.reindex(index=df1.index, method='ffill')
+                    else:
+                        newds2 = newds.reindex(index=df1.index, fill_value=value)
+            elif pd.isnull(value):
+                newds2 = newds.reindex(index=df1.index, method=fillmethod)
+            else:
+                newds2 = newds.reindex(index=df1.index, fill_value=value)
+            if len(newds2.dropna()) == 0:
+                pass
+        except:
+            nl = len(newds.index)
+            nul = len(np.unique(newds.index.values))
+        nul = len(np.unique(newds.index.values))
+        return newds2
+
+
 def apply_combi(df1, df2, coeff1=1, coeff2=0, constant=0,
                 islinear=True, transfo=None):
     """
@@ -332,69 +425,94 @@ def apply_combi(df1, df2, coeff1=1, coeff2=0, constant=0,
     ------
     new_df : The output dataframe
     """
-    df = pd.concat([df1, df2], axis=1)
-    df = df.fillna(method='ffill')
+    # print("df1 {}".format(df1))
+    # print('df2{}'.format(df2))
+    newds2 = None
+
+
+            # Init.Log('L\'index de {0} est de longueur {1} et a {2} doublons' \
+            #          .format(newds.name, nl, nl - nul),
+            #          doexit=False)
+            # return df2
+
+    # df = pd.concat([df1, df2], axis=1)
+    # df = df1.merge(df2, how='outer', right_index=True, left_index=True)
+    # df = pd.concat([df1, df1], axis=1)
+    # df = pd.DataFrame()
+    # df = df.fillna(df2)
+    # df = df.fillna(method='ffill')
     # df = df1.merge(df2, left_index=True, right_index=True)
 
-    df.columns = ['df1', 'df2']
-    cols1 = get_columns(df)
+    # df.columns = ['df1', 'df2']
 
-    if len(cols1) > 0:
-        col1 = cols1[0]
-        print(col1)
-        datacol1 = df[col1]
-
-    else:
-        datacol1 = None
-
-    cols2 = get_columns(df)
-    if len(cols2) > 0:
-        col2 = cols2[1]
-        datacol2 = df[col2]
-
-    else:
-        datacol2 = None
-    c1null = c1one = c1neg = c2null = c2one = c2neg = False
-    if coeff1 == 0 or datacol1 is None:
-        c1null = True
-    elif abs(coeff1) == 1:
-        c1one = True
-    if coeff1 < 0:
-        c1neg = True
-    if coeff2 == 0 or datacol2 is None:
-        c2null = True
-    elif abs(coeff2) == 1:
-        c2one = True
-    if coeff2 < 0:
-        c2neg = True
-
-    if islinear:
-        combiarray = np.zeros(len(df.index)) + constant
-        if not c1null:
-            combiarray = datacol1.values * coeff1 + constant
-
-        if not c2null:
-            combiarray = combiarray + datacol2.values * coeff2
-
-    else:
-
-        # constante égale à 0 en multiplicatif: on la prend pour 1
-        if constant == 0:
-            constant = 1
-        combiarray = np.ones(len(df.index)) * constant
-
-        if (datacol1 is not None):
-            combiarray = np.power(datacol1.values, coeff1) * constant
-        if (datacol2 is not None):
-            combiarray = combiarray * np.power(datacol2.values, coeff2)
-    if transfo is not None:
-        if str(transfo).lower() == 'tanh':
-            combiarray = np.tanh(combiarray)
-        elif str(transfo).lower() == 'sign':
-            combiarray = np.sign(combiarray)
-    new_df = pd.DataFrame(index=df.index, data=combiarray)
-    new_df.columns = ['COMBI']
-    return new_df
+    # df = newds2
+    print('*****************************')
+    # print(newds2)
+    # print(newds)
+    # print(df2)
+    df1 = index_df(df1, df2)
+    df2 = index_df(df2, df1)
+    df = pd.concat([df1, df2], axis=1)
+    print(df)
+    # print(pd.concat([newds, df2], axis=1))
+    # cols1 = get_columns(df)
+    #
+    # if len(cols1) > 0:
+    #     col1 = cols1[0]
+    #     print(col1)
+    #     datacol1 = df[col1]
+    #
+    # else:
+    #     datacol1 = None
+    #
+    # cols2 = get_columns(df)
+    # if len(cols2) > 0:extendToDate
+    #     col2 = cols2[1]
+    #     datacol2 = df[col2]
+    #
+    # else:
+    #     datacol2 = None
+    # c1null = c1one = c1neg = c2null = c2one = c2neg = False
+    # if coeff1 == 0 or datacol1 is None:
+    #     c1null = True
+    # elif abs(coeff1) == 1:
+    #     c1one = True
+    # if coeff1 < 0:
+    #     c1neg = True
+    # if coeff2 == 0 or datacol2 is None:
+    #     c2null = True
+    # elif abs(coeff2) == 1:
+    #     c2one = True
+    # if coeff2 < 0:
+    #     c2neg = True
+    #
+    # if islinear:
+    #     combiarray = np.zeros(len(df.index)) + constant
+    #     if not c1null:
+    #         combiarray = datacol1.values * coeff1 + constant
+    #
+    #     if not c2null:
+    #         combiarray = combiarray + datacol2.values * coeff2
+    #
+    # else:
+    #
+    #     # constante égale à 0 en multiplicatif: on la prend pour 1
+    #     if constant == 0:
+    #         constant = 1
+    #     combiarray = np.ones(len(df.index)) * constant
+    #
+    #     if (datacol1 is not None):
+    #         combiarray = np.power(datacol1.values, coeff1) * constant
+    #     if (datacol2 is not None):
+    #         combiarray = combiarray * np.power(datacol2.values, coeff2)
+    # if transfo is not None:
+    #     if str(transfo).lower() == 'tanh':
+    #         combiarray = np.tanh(combiarray)
+    #     elif str(transfo).lower() == 'sign':
+    #         combiarray = np.sign(combiarray)
+    # new_df = pd.DataFrame(index=df.index, data=combiarray)
+    # new_df.columns = ['COMBI']
+    # return new_df
 
 
 def take_columns(df, cols=None, forceuppercase=True):

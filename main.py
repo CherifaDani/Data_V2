@@ -52,9 +52,51 @@ from compare_dfs import compare_two_dfs
 # var_name = 'CDS_GER_1Y'
 # var_name = 'STR_USD_1D_Z5D'
 #
-df1 = data_utils.load_var('compare/1.csv', '1')
-df2 = data_utils.load_var('compare/2.csv', '2')
-print compare_two_dfs(df1, df2)
+
+#
+# def processing_dir(dir_path1, dir_path2):
+#     # list_accepted = []
+#     list_dict = []
+#     element = ''
+#     for element in os.listdir(dir_path1):
+#         df1 = data_utils.load_var(join(dir_path1, element), '1')
+#         for element in os.listdir(dir_path2):
+#             df2 = data_utils.load_var(join(dir_path2, element), '2')
+#     print compare_two_dfs(df1, df2)
+
+
+dir_path1 = 'I06'
+dir_path2 = 'I04'
+i = 0
+j = 0
+for element1 in os.listdir(dir_path1):
+    for element2 in os.listdir(dir_path2):
+        if element1 == element2:
+            j += 1
+            csv_path = dir_path1 + '/' + element1
+            df_base = data_utils.load_var(csv_path, 'x')
+            # df_base.columns = [x.lower() for x in df_base.columns]
+            csv_path = dir_path2 + '/' + element2
+            df_latest = data_utils.load_var(csv_path, 'y')
+            dfs = [df_latest, df_base]
+
+            if df_base.equals(df_latest):
+                print(element1)
+            else:
+                i += 1
+                print(element1, element2)
+                print(compare_two_dfs(df_base, df_latest))
+print(i)
+print(j)
+            # df_latest.sort_index(ascending=True, inplace=True)
+            # df_latest.columns = [x.lower() for x in df_latest.columns]
+            # df_final = pd.DataFrame()
+            # df_final = df_base.append(df_latest)
+            # df_final = df_final[~df_final.index.duplicated(take_last=False)]
+            # print df_final.shape
+            # df_final.to_csv(path + element1)
+
+# print processing_dir(dir_path1, dir_path2)
 # # df.set_index('')
 # print(df1.shape, df2.shape)
 # df3 = pd.concat([df1, df2], axis=1)

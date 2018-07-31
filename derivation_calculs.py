@@ -47,10 +47,10 @@ def apply_operation(var_list, freq, operation, parameters):
     # var_name0 = var_names[0]
     idx1 = dfs[1] if len(list(dfs)) == 2 else None
     # var_name1 = var_names[1] if len(list(var_names)) == 2 else None
-    col1 = parameters.get('col1', 0)
-    if col1 == 1:
-        idx0 = idx1
-        idx1 = idx0
+    # col1 = parameters.get('col1', 0)
+    # if col1 == 1:
+    # idx0 = idx1
+    # idx1 = idx0
     colout = parameters.get('col_out', None)
     # print('colout')
     # print(type(colout))
