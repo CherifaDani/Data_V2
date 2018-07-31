@@ -2,14 +2,12 @@
 # from __future__ import division
 import pandas as pd
 import numpy as np
-from data_utils import reindex
 import math
 import logging
 
 from datetime import datetime
 from datetime import timedelta
-from pandas.tseries.holiday import USFederalHolidayCalendar
-from pandas.tseries.offsets import CustomBusinessDay
+
 
 try:
     import data_utils
@@ -31,14 +29,38 @@ logger.debug('Logger for class ')
 logger.setLevel(logging.INFO)
 
 
-glbNanoSexPerDay = 86400000000000.0
-glbFieldSep = '!'
-glbMetaVarPrefix = '$$'
-glbDefaultTime = datetime(1900, 1, 1, 18, 30)
+glbnano = 86400000000000.0
+glbmetavar = '$$'
+glbdefault_time = datetime(1900, 1, 1, 18, 30)
 
 
 def extendtodate(df, todate=None, freq='B', limit=5):
-    '''Etend un dataset jusqu'à une date plus récente en prolongeant les valeurs. '''
+    """
+       Function used to extend a dataset to a newer date by extending the values
+
+       Parameters
+       ----------
+       df : {Dataframe type}
+            The input dataframe
+
+       todate : {Datetime type}
+                 A newer date
+                 default: None
+
+       freq : {Char type}
+               The frequency of the dataframe,
+               default: 'B'
+
+       limit : {Integer type}
+                The number of extended days not to exceed
+                default: 5
+
+       Return
+       ------
+       new_df : {Dataframe type}
+                 The new dataframe
+    """
+
     if todate is None:
         todate = datetime.now()
     else:
@@ -46,20 +68,34 @@ def extendtodate(df, todate=None, freq='B', limit=5):
     dt0 = df.index[-1] + timedelta(days=1)
     if dt0 <= todate:
         dtindex = pd.bdate_range(start=dt0, end=todate, freq=freq)
-        newds = pd.DataFrame(index=dtindex, columns=df.columns)
+        newdf = pd.DataFrame(index=dtindex, columns=df.columns)
         for col in df.columns:
-            newds.ix[0, col] = df.ix[-1, col]
-            newds[col] = newds[col].fillna(method='ffill', limit=limit)
-        self = df.append(newds)
+            newdf.ix[0, col] = df.ix[-1, col]
+            newdf[col] = newdf[col].fillna(method='ffill', limit=limit)
+        new_df = df.append(newdf)
 
-    return self
+    return new_df
 
 
 def estimate_nat_freq(df, col):
-    '''Estime la fréquence naturelle d'une série: la fréquence des changements de valeur '''
+    """
+       Function used to estimate the natural frequency of a DF: the frequency of the change of the values
+
+       Parameters
+       ----------
+       df : {Dataframe type}
+            The input dataframe
+
+       col : {Str or int type}
+
+       Return
+       ------
+       new_df : {Dataframe type}
+                 The new dataframe
+    """
     df.dropna()
     df.sort_index(inplace=True)
-    # fl = float((df.index.asi8[-1] - df.index.asi8[0]) / glbNanoSexPerDay)
+    # fl = float((df.index.asi8[-1] - df.index.asi8[0]) / glbnano)
     fl = float(len(df.values))
     try:
         if type(col) == int:
@@ -77,14 +113,14 @@ def estimate_nat_freq(df, col):
     ddf = df[ddf != 0]
     # rajouter une colonne pour les différences de dates
     ddf['deltat'] = 0
-    # ddf.deltat[1:] = (ddf.index.asi8[1:] - ddf.index.asi8[: -1]) / glbNanoSexPerDay
+    # ddf.deltat[1:] = (ddf.index.asi8[1:] - ddf.index.asi8[: -1]) / glbnano
     # trier les intervalles entre changements de dates
     lastdelta = ddf.ix[-1]
     ddf.sort(columns='deltat', inplace=True)
     length = len(ddf)
     deltat = ddf.deltat[1:]
     fdict = {}
-    # pdb.set_trace()
+
     if length > 1:
         fdict['last'] = lastdelta
         fdict['min'] = mind = deltat.min()
@@ -117,9 +153,41 @@ def estimate_nat_freq(df, col):
                     fdict['pct95'] = deltat.ix[int(0.95 * length) - 1]
     return fdict
 
+#
+# def set_calendar(df, start, end, freq='B', forcereset=False):
+#     # création d'un index de dates
+#     try:
+#         rng = pd.bdate_range(start=start, end=end, freq=freq)
+#     except:
+#         return df
+#     try:
+#         df[start: end]
+#         if forcereset or \
+#                 np.datetime64(start) < np.datetime64(df.index[0]) or \
+#                 np.datetime64(end) > np.datetime64(df.index[-1]):
+#     # except:
+#     #     TDataSet.__i
+
 
 def get_columns(df, cols=None, forceuppercase=True):
-    '''Renvoie des identifiants de colonnes pour un(vecteur de) int ou str. '''
+    """
+       Function used to return the column identifiers for an integer or a string
+
+       Parameters
+       ----------
+       df : {Dataframe type}
+            The input dataframe
+
+       cols : {Str or int type}
+              default: None
+
+       forceuppercase : {Boolean type}
+                         default: True
+       Return
+       ------
+       new_df : {Dataframe type}
+                 The new dataframe
+    """
     if forceuppercase:
         cols_renamed = []
         for col in df.columns:
@@ -212,17 +280,6 @@ def apply_timeshift(df, shift=1, freq='B', ownfreq=None, refdate=None):
     ------
     A shifted dataframe
     """
-    """
-            Date shift to reflect actual data availability
-            Applied to all columns in a dataframe
-            """
-    '''Renvoie une copie de l'objet courant, avec dates translatées d'un délai. '''
-    '''Les noms de colonnes de l'objet courant ne sont pas modifiés.'''
-    '''freq représente l''unité de compte du décalage'''
-    '''ownfreq représente la fréquence finale(propre) de la série.'''
-    '''refdate: date de calcul. si fournie, les décalages sont limités à cette date'''
-    '''Exemple: décaler de 20j une série trimestrielle'''
-
     new_df = df.copy()
 
     # pas de décalage: on peut changer la fréquence
@@ -253,78 +310,231 @@ def apply_timeshift(df, shift=1, freq='B', ownfreq=None, refdate=None):
     return ndf
 
 
+def min_day_interval(df):
+    deltadays = (df.index.asi8[1:] - df.index.asi8[: -1]) / glbnano
+    return np.rint(deltadays).min()
+
+
+def index_df(df1, df2):
+    fillmethod = 'ffill'
+    value = None
+    newds = df1
+    if isinstance(newds, (pd.TimeSeries, pd.Series, pd.DataFrame)):
+
+        #  Vérification des critères
+
+        if len(df1.index) == 0:
+            self = newds.copy()
+            for col in self.columns:
+                # self [col].delete()
+                del df1[col]
+        else:
+            #  df=self.join(newds,  how='outer')
+            #  pdb.set_trace()
+            if newds.index[0] < df1.index[0] or \
+                    newds.index[-1] > df1.index[-1]:
+                newdend = newds.index[-1]
+                selfend = df1.index[-1]
+                if newdend.day == selfend.day and \
+                        newdend.month == selfend.month and \
+                        newdend.year == selfend.year:
+                    newdend = newdend + pd.Timedelta(hours=selfend.hour - newdend.hour,
+                                                     minutes=selfend.minute - newdend.minute,
+                                                     seconds=selfend.second - newdend.second)
+
+                newds = take_interval(newds, dstart=df1.index[0],
+                                      dend=newdend, inplace=True)
+
+        try:
+
+            if fillmethod == 'auto':
+                mindeltas = min_day_interval(newds)
+                mindelta = min_day_interval(df1)
+                #  Réindexation dans une série existante: on compare les fréquences
+
+                if mindeltas == mindelta:
+                    #  Si la nouvelle série a la même fréquence que la série hôte
+                    if pd.isnull(value):
+                        #  pas de valeur de remplissage: ajuster les index en ne remontant pas au delà de la fréquence native
+                        #  Commencer par être sévère pour empêcher le remplissage de vraies valeurs manquantes
+                        # CG 26 Oct 15
+                        # mindelta au lieu de mindelta - 1
+                        newds2 = newds.reindex(index=df1.index, method='ffill', limit=mindelta)
+                        newds2[newds2.index.date > newds.index[-1].date()] = np.nan
+                        # newds2[newds2.index > newds.index [-1]]=np.nan
+                        # CG 8 Dec 15
+                        # empêcher le prolongement de la série au-delà de la série d'origine
+                        #  si on perd trop de données, cas d'une série japonaise 9h30: aller chercher les données du matin
+                        if len(newds2.dropna()) < len(newds.index) / 2.0:
+                            newds2 = newds.reindex(index=df1.index, method='ffill')
+                    else:
+
+                        newds2 = newds.reindex(index=df1.index, fill_value=value)
+                else:
+                    if pd.isnull(value):
+                        newds2 = newds.reindex(index=df1.index, method='ffill')
+                    else:
+                        newds2 = newds.reindex(index=df1.index, fill_value=value)
+            elif pd.isnull(value):
+                newds2 = newds.reindex(index=df1.index, method=fillmethod)
+            else:
+                newds2 = newds.reindex(index=df1.index, fill_value=value)
+            if len(newds2.dropna()) == 0:
+                pass
+        except:
+            nl = len(newds.index)
+            nul = len(np.unique(newds.index.values))
+        nul = len(np.unique(newds.index.values))
+        return newds2
+
+
 def apply_combi(df1, df2, coeff1=1, coeff2=0, constant=0,
                 islinear=True, transfo=None):
-    '''Renvoie la combinaison linéaire ou exponentielle de deux colonnes. '''
-    # df1, df2 = reindex(df1, df2, {method: 'nearest'})
+    """
+    This function returns  the linear or exponential combination of two columns
 
-    df = pd.concat([df1, df2], axis=1)
-    df = df.fillna(method='ffill')
+    Parameters
+    ----------
+    df1 : {Dataframe type}
+          The input dataframe
+
+    df2 : {Dataframe type}
+          The input dataframe
+
+    coeff1 : {Float type}
+              A multiplicative coefficient if islinear is True,
+              else exponential, applied to the first DF
+              Default: 1
+
+    coeff2 : {Float type}
+              A multiplicative coefficient if islinear is True,
+              else exponential, applied to the second DF
+              Default: 0
+
+    constant : {Float type}
+               This value is added if islinear is true, else multiplied.
+                Default: 0
+
+    islinear : {Boolean type}
+               Designates the nature of the operation
+               True: addition
+               False: multiplication
+               default: None
+
+    Return
+    ------
+    new_df : The output dataframe
+    """
+    # print("df1 {}".format(df1))
+    # print('df2{}'.format(df2))
+    newds2 = None
+
+
+            # Init.Log('L\'index de {0} est de longueur {1} et a {2} doublons' \
+            #          .format(newds.name, nl, nl - nul),
+            #          doexit=False)
+            # return df2
+
+    # df = pd.concat([df1, df2], axis=1)
+    # df = df1.merge(df2, how='outer', right_index=True, left_index=True)
+    # df = pd.concat([df1, df1], axis=1)
+    # df = pd.DataFrame()
+    # df = df.fillna(df2)
+    # df = df.fillna(method='ffill')
     # df = df1.merge(df2, left_index=True, right_index=True)
 
-    df.columns = ['df1', 'df2']
-    cols1 = get_columns(df)
+    # df.columns = ['df1', 'df2']
 
-    if len(cols1) > 0:
-        col1 = cols1[0]
-        print(col1)
-        datacol1 = df[col1]
-
-    else:
-        datacol1 = None
-
-    cols2 = get_columns(df)
-    if len(cols2) > 0:
-        col2 = cols2[1]
-        datacol2 = df[col2]
-
-    else:
-        datacol2 = None
-    c1null = c1one = c1neg = c2null = c2one = c2neg = False
-    if coeff1 == 0 or datacol1 is None:
-        c1null = True
-    elif abs(coeff1) == 1:
-        c1one = True
-    if coeff1 < 0:
-        c1neg = True
-    if coeff2 == 0 or datacol2 is None:
-        c2null = True
-    elif abs(coeff2) == 1:
-        c2one = True
-    if coeff2 < 0:
-        c2neg = True
-
-    if islinear:
-        combiarray = np.zeros(len(df.index)) + constant
-        if not c1null:
-            combiarray = datacol1.values * coeff1 + constant
-
-        if not c2null:
-            combiarray = combiarray + datacol2.values * coeff2
-
-    else:
-
-        # constante égale à 0 en multiplicatif: on la prend pour 1
-        if constant == 0:
-            constant = 1
-        combiarray = np.ones(len(df.index)) * constant
-
-        if (datacol1 is not None):
-            combiarray = np.power(datacol1.values, coeff1) * constant
-        if (datacol2 is not None):
-            combiarray = combiarray * np.power(datacol2.values, coeff2)
-    if transfo is not None:
-        if str(transfo).lower() == 'tanh':
-            combiarray = np.tanh(combiarray)
-        elif str(transfo).lower() == 'sign':
-            combiarray = np.sign(combiarray)
-    new_df = pd.DataFrame(index=df.index, data=combiarray)
-    new_df.columns = ['COMBI']
-    return new_df
+    # df = newds2
+    print('*****************************')
+    # print(newds2)
+    # print(newds)
+    # print(df2)
+    df1 = index_df(df1, df2)
+    df2 = index_df(df2, df1)
+    df = pd.concat([df1, df2], axis=1)
+    print(df)
+    # print(pd.concat([newds, df2], axis=1))
+    # cols1 = get_columns(df)
+    #
+    # if len(cols1) > 0:
+    #     col1 = cols1[0]
+    #     print(col1)
+    #     datacol1 = df[col1]
+    #
+    # else:
+    #     datacol1 = None
+    #
+    # cols2 = get_columns(df)
+    # if len(cols2) > 0:extendToDate
+    #     col2 = cols2[1]
+    #     datacol2 = df[col2]
+    #
+    # else:
+    #     datacol2 = None
+    # c1null = c1one = c1neg = c2null = c2one = c2neg = False
+    # if coeff1 == 0 or datacol1 is None:
+    #     c1null = True
+    # elif abs(coeff1) == 1:
+    #     c1one = True
+    # if coeff1 < 0:
+    #     c1neg = True
+    # if coeff2 == 0 or datacol2 is None:
+    #     c2null = True
+    # elif abs(coeff2) == 1:
+    #     c2one = True
+    # if coeff2 < 0:
+    #     c2neg = True
+    #
+    # if islinear:
+    #     combiarray = np.zeros(len(df.index)) + constant
+    #     if not c1null:
+    #         combiarray = datacol1.values * coeff1 + constant
+    #
+    #     if not c2null:
+    #         combiarray = combiarray + datacol2.values * coeff2
+    #
+    # else:
+    #
+    #     # constante égale à 0 en multiplicatif: on la prend pour 1
+    #     if constant == 0:
+    #         constant = 1
+    #     combiarray = np.ones(len(df.index)) * constant
+    #
+    #     if (datacol1 is not None):
+    #         combiarray = np.power(datacol1.values, coeff1) * constant
+    #     if (datacol2 is not None):
+    #         combiarray = combiarray * np.power(datacol2.values, coeff2)
+    # if transfo is not None:
+    #     if str(transfo).lower() == 'tanh':
+    #         combiarray = np.tanh(combiarray)
+    #     elif str(transfo).lower() == 'sign':
+    #         combiarray = np.sign(combiarray)
+    # new_df = pd.DataFrame(index=df.index, data=combiarray)
+    # new_df.columns = ['COMBI']
+    # return new_df
 
 
 def take_columns(df, cols=None, forceuppercase=True):
-    '''Equivalent à l'opérateur []'''
+    """
+    This function returns one or many columns of a DF
+
+    Parameters
+    ----------
+    df : {Dataframe type}
+          The input dataframe
+
+    cols : {List type}
+            A list of the columns
+            Default: None
+
+    forceuppercase : {Boolean type}
+                      Default: True
+
+    Return
+    ------
+    ds : The output dataframe
+    """
     if cols is None:
         return df
     columns = get_columns(df, cols=cols, forceuppercase=forceuppercase)
@@ -345,19 +555,54 @@ def apply_ewma(df, emadecay=None, span=1, inplace=True,
                cols=None, wres=True, normalize=True,
                histoemadata=None, overridedepth=0,
                stdev_min=1e-5):
+    """
+    This function returns the ema series of a set of columns for a given pseudo-span
 
-    '''Renvoie la série des ema d'un ensemble de colonnes pour une pseudo-durée(span) donnée.'''
-    ''' self: contient la totalité des données primaires dont on veut calculer la moyenne
-        emadecay: coefficient d'atténuation de la moyenne(proche de 1). Prioritaire si fourni.
-       span: 2/emadecay - 1
-       cols: groupe de colonnes dont on calcule l'ewma.
-       wres: si True, on calcule également le résidu
-       normalize: si True, on calcule aussi le Z-Score(résidu / ewmastd(même span))
-       histoemadata: série facultative contenant les valeurs historiques de l'ewma sur des dates
-           normalement antérieures aux données primaires.
-       overridedepth: nombre de jours passés(à partir de la donnée la plus récente) à recalculer
-       '''
+    Parameters
+    ----------
+    df : {Dataframe type}
+          The input dataframe
 
+    emadecay : {Float type}
+                Attenuation coefficient of the mean (close to 1)
+                Default: None
+
+    span : {Float type}
+            span = 2/emadecay - 1
+            Default: 1
+
+    inplace : {Boolean type}
+            Default: True
+
+    cols : {List type}
+            A list of columns whose ewma is calculated
+            Default: None
+
+    wres : {boolean type}
+            If True, the residue is also calculated
+            Default: True
+
+    normalize : {Boolean type}
+                If True, The Z-score: (residu / ewmastd) is calculated
+                 Default: True
+
+    histoemadata : {Integer type}
+                    Optional series containing the historical values ​​of the ewma on dates
+                    normally prior to the primary data.
+                     Default: None
+
+    overridedepth : {Integer type}
+                    The number of days spent (from the most recent data) to recalculate
+                    Default: 0
+
+    stdev_min : {Float type}
+                A minimum tolerated value for the exponentially-weighted moving std
+                Default: 1e-5
+
+    Return
+    ------
+    new_df : The output dataframe
+    """
     usehistoforinit = False
     if (histoemadata is not None) \
             and (type(histoemadata) == type(df)) \
@@ -410,7 +655,7 @@ def apply_ewma(df, emadecay=None, span=1, inplace=True,
         # recalcul de la totalité des données de l'ema
         emadata = pd.ewma(datacols, span=span, adjust=True)
         new_df = emadata
-     # calcul du résidu
+    # calcul du résidu
     if wres:
         rescols = df[cols] - emadata
         # calcul du ZScore
@@ -425,19 +670,49 @@ def apply_ewma(df, emadecay=None, span=1, inplace=True,
                 new_df[col] = rescols[col]
                 if normalize:
                     new_df[col] = zcols[col]
-
-    new_df.columns = ['EWMA']
     return new_df
 
 
 def apply_corr(df1, df2, period=1,
                span=20, exponential=True,
                inpct=True, lag=0):
-    '''Renvoie la série des corrélations entre deux colonnes d'un Dataset
-       period: si 0, corrélation des valeurs, si > 0, corrélation des variations sur period
-       lag2: retard sur la seconde colonne
-       cols: spécifications de 1 ou 2 colonnes
-    '''
+    """
+        This function computes the correlation between two DFs
+
+        Parameters
+        ----------
+        df1 : {Dataframe type}
+              The input dataframe
+
+        df2 : {Dataframe type}
+              The input dataframe
+
+
+        period : {Integer type}
+                 If period = 0: Apply correlation between two DFs
+                 If period > 0: Apply correlation of variations over period
+                 Default: 1
+
+        exponential : {Boolean type}
+                    Default: True
+
+        span : {Integer type}
+                The rolling window size
+                Default: 20
+
+        inpct : {Boolean type}
+                Use of arithmetic or geometric returns
+                Default: True
+
+        lag : {Integer type}
+              Delay on the second column
+              Default: 0
+
+        Return
+        ------
+        new_df : The output dataframe
+
+    """
     # hm_time = df2.index[0]
     #
     # df1 = set_daytime(df1, hm_time=hm_time)
@@ -485,10 +760,10 @@ def apply_corr(df1, df2, period=1,
     else:
         corrdata = pd.rolling_corr(data1, data2, window=span)
 
-    newdataset = pd.DataFrame(index=df.index, data=(corrdata))
-    newdataset.columns = ['CORR']
+    new_df = pd.DataFrame(index=df.index, data=(corrdata))
+    new_df.columns = ['CORR']
 
-    return newdataset
+    return new_df
 
 # def apply_corr(dfx, dfy, span=20,  period=1,
 #                exponential=True,
@@ -505,7 +780,7 @@ def apply_corr(df1, df2, period=1,
 #         df1 = dfx
 #         df2 = dfx
 #     # print(df1.shape)
-#     newdataset = pd.DataFrame(index=dfx.index)
+#     new_df = pd.DataFrame(index=dfx.index)
 #     col1 = df1
 #     col2 = df2
 #     # if len(cols) == 1:
@@ -533,12 +808,12 @@ def apply_corr(df1, df2, period=1,
 #         corrdata = pd.rolling_corr(data1, data2, window=span)
 #
 #     corrdata = corrdata.dropna()
-#     # newdataset['CORR'] = corrdata
-#     newdataset = corrdata
-#     newdataset.columns = ['CORR']
+#     # new_df['CORR'] = corrdata
+#     new_df = corrdata
+#     new_df.columns = ['CORR']
 #
-#     # print(newdataset)
-#     return newdataset
+#     # print(new_df)
+#     return new_df
 
 
 def apply_vol(df,
@@ -549,11 +824,50 @@ def apply_vol(df,
               inpct=True,
               cols=None
               ):
-    '''Renvoie la série des volatilités de rendements '''
+    """
+         This function returns the return volatility series
+
+         Parameters
+         ----------
+         df : {Dataframe type}
+               The input dataframe
+
+         period : {Integer type}
+                  If period = 0: Apply correlation between two DFs
+                  If period > 0: Apply correlation of variations over period
+                  Default: 1
+
+         inplace : {Boolean type}
+                     Default: True
+
+         window : {Integer type}
+                 The rolling window size
+                 Default: 20
+
+         inpct : {Boolean type}
+                 Use of arithmetic or geometric returns
+                 Default: True
+
+         annualize : {Boolean type}
+                      Annualized volatility if True, else dependant on the size of the window
+                      Default: True
+
+         fillinit : {Boolean type}
+                    If True, copy of the first dates inside the first window of calculation
+                    Default: True
+
+         cols : {List type}
+                Default: None
+
+         Return
+         ------
+         new_df : The output dataframe
+
+     """
     if inplace:
-        newdataset = df
+        new_df = df
     else:
-        newdataset = df.copy()
+        new_df = df.copy()
     if cols is None:
         cols = df.columns.values
         cols = data_utils.check_cell(cols)
@@ -578,31 +892,55 @@ def apply_vol(df,
             annfactor = math.sqrt(260 / nfreq)
         else:
             annfactor = 1
-        newdataset[col] = voldata[voldata.columns[icol]] * annfactor
+        new_df[col] = voldata[voldata.columns[icol]] * annfactor
 
-    # newdataset.columns = newcols
-    newdataset.columns = ['VOL']
-    print(newdataset)
-    return newdataset
+    # new_df.columns = newcols
+    # new_df.columns = ['VOL']
+    print(new_df)
+    return new_df
 
 
 def take_diff(df, period=1, inplace=False, cols=None, inpct=True,
-              fieldsep='', alldays=True, ownfreq=None):
-    '''Renvoie la série des différences d'une colonne pour un décalage donné.
-       En vue d'une synchronisation ultérieure dans une matrice, il faut pré-remplir les différences
-       par des zéros à toutes les dates ne figurant pas dans l'index.
-       # CG 14/6/2: introduction de l'argument ownfreq représentant la fréquence naturelle de la série
-       Celle-ci est nécessaire dans le cas d'une série mensuelle présentée quotidiennement,
-       avec donc un saut par mois.
-    '''
+              alldays=True, ownfreq=None):
+    """
+         This function returns the series of differences of a column for a given offset
+
+         Parameters
+         ----------
+         df : {Dataframe type}
+               The input dataframe
+
+         period : {Integer type}
+
+                  Default: 1
+
+         inplace : {Boolean type}
+                    If True, returns a copy of the DF
+                   Default: False
+
+         alldays : {Boolean type}
+                    Default: True
+
+         ownfreq : {Boolean type}
+                    The natural frequency of the series
+                    Default: None
+
+         cols : {List type}
+                Default: None
+
+         Return
+         ------
+         new_df : The output dataframe
+
+     """
 
     if inplace:
-        newdataset = df
+        new_df = df
     else:
-        newdataset = None
+        new_df = None
 
     cols = get_columns(df, cols)
-    # if not(col in self.columns) : return newdataset
+    # if not(col in self.columns) : return new_df
     # import pdb; pdb.set_trace()
     # datacols=pd.DataFrame(data=self [cols], columns=cols)
     datacols = df[cols]
@@ -643,26 +981,59 @@ def take_diff(df, period=1, inplace=False, cols=None, inpct=True,
 
     if inplace:
         for col in cols:
-            newdataset[col] = deltadata[col]
+            new_df[col] = deltadata[col]
     else:
         # si l'objet diffseries est un pd.Series, il n'a pas de champ columns
-        newdataset = pd.DataFrame(index=deltadata.index,
+        new_df = pd.DataFrame(index=deltadata.index,
                                   data=deltadata.values,
                                   columns=cols)
-    # newdataset.columns = newcols
-    # newdataset = newdataset.asfreq(freq='B')
-    # newdataset.reindex(index=idx_all)
-    newdataset.columns = ['X']
-    return newdataset
+    # new_df.columns = newcols
+    # new_df = new_df.asfreq(freq='B')
+    # new_df.reindex(index=idx_all)
+    new_df.columns = ['X']
+    return new_df
 
 
-def apply_rolling(maincol, substcol,  rollfreq, iday, iweek, effectiveroll_lag=0, inpct=True):
-    '''
-    Renvoie la série des variations d'une colonne pour un décalage donné.
-    Dans le calcul de V(t) / V(t - p), V est la série principale self [maincol].
-    Par exception, aux dates spécifiées par la règle rolldate, on calcule V(t) / Vsubst(t-p),
-    où Vsubst représente la série self [substcol]
-    '''
+def apply_rolling(maincol, substcol, iday=1, iweek=1, rollfreq='BMS', effectiveroll_lag=0, inpct=True):
+
+    """
+     This function returns the series of variations of a column for a given offset.
+
+     Parameters
+     ----------
+     maincol : {Dataframe type}
+                The future c1
+
+     substcol : {Dataframe type}
+                 The future c2
+
+     rollfreq : {String type}
+                Default: 'BMS' => Business Month Start
+
+     iday : {Integer type}
+            The day number where the roll of the contract
+            Default: 1
+
+     iweek : {Integer type}
+            The week number where the next future (c1) expires
+             Default: 1
+
+     effectiveroll_lag : {Integer type}
+                          Can be 0 or 1;
+                          It indicates whether the future c1 is used until the included roll date (value at 0)
+                          or until the previous day (value at 1)
+                          Default: 0
+
+     inpct : {Boolean type}
+              Creation of future prices from arithmetic (inpct=False)
+              or geometric (inpct=True) returns
+              Default: True
+
+     Return
+     ------
+     new_df : The output dataframe
+
+     """
 
     assert type(rollfreq) == str
     assert iday >= 0
@@ -693,6 +1064,11 @@ def apply_rolling(maincol, substcol,  rollfreq, iday, iweek, effectiveroll_lag=0
     # générer la série des dates de roll
     #          if rollfreq [1:].find('BS') < 0:
     #              rollfreq=rollfreq + 'BS'
+
+    #     Dans le calcul de V(t) / V(t - p), V est la série principale self [maincol].
+    #     Par exception, aux dates spécifiées par la règle rolldate, on calcule V(t) / Vsubst(t-p),
+    #     où Vsubst représente la série substcol
+
     rolldates = pd.bdate_range(start=df.index[0], end=df.index[-1], freq=rollfreq)
     rolldates = rolldates + pd.datetools.WeekOfMonth(week=iweek, weekday=iday)
     # Ne garder que les dates de roll antérieures aux données courantes
@@ -730,23 +1106,36 @@ def apply_rolling(maincol, substcol,  rollfreq, iday, iweek, effectiveroll_lag=0
     newcol = 'ROLLING_RETURN'
     retdata.loc[rolldates, maincol] = rollday_returns
     retdata.loc[dayafter_rolldates, maincol] = dayafter_returns
-    newdataset = pd.DataFrame(index=retdata.index,
+    new_df = pd.DataFrame(index=retdata.index,
                               data=retdata.values,
                               columns=[newcol])
     # revenir au calendrier restreint
-    newdataset = pd.DataFrame(newdataset.dropna())
-    newdataset.columns = [newcol]
-    # newdataset.name = retdataname
-    return newdataset
+    new_df = pd.DataFrame(new_df.dropna())
+    new_df.columns = [newcol]
+    # new_df.name = retdataname
+    return new_df
 
 
 def set_daytime(df, hm_time, dates=None):
     """
-    Fixe l'heure de la journée pour tout l'index ou pour des dates données.
+     This function sets the time of day for the entire index or for specific dates.
 
-    hm_time: datetime ou Timestamp, heure/minute/seconde à appliquer aux dates
-    dates: liste de dates dont on veut modif ier l'heure
-    """
+     Parameters
+     ----------
+     df : {Dataframe type}
+           The input dataframe
+
+     hm_time : {Datetime or Timestamp type}
+                Hour / minute / second to apply to dates
+
+     dates : {List type}
+              List of dates to modify
+
+     Return
+     ------
+     new_df : The output dataframe, with a new index
+
+     """
     if type(hm_time) in [datetime, pd.tslib.Timestamp]:
         if dates is None:
             newidx = df.index.map(lambda (x): datetime(year=x.year,
@@ -769,15 +1158,40 @@ def set_daytime(df, hm_time, dates=None):
         return df
 
 
-def apply_lag(df, lag=1, freq=None, cols=None, inplace=False):
-    '''Renvoie une copie de l'objet courant, avec valeurs décalées d'un retard et réalignées. '''
-    '''Les noms de colonnes de l'objet courant ne sont pas modifiés.'''
-    newdataset = df.copy()
+def apply_lag(df, lag=1, freq='B', cols=None, inplace=False):
+
+    """
+     This function returns a copy of the current object, with values ​​lagged of a delay and realigned
+
+     Parameters
+     ----------
+     df : {Dataframe type}
+           The input dataframe
+
+     lag : {Integer type}
+            offset time (delay)
+            Default: 1
+
+     freq : {Char type}
+            Default: 'B'
+
+     cols  : {List type}
+             Default: None
+
+     inplace : {Boolean type}
+                Default: False
+
+     Return
+     ------
+     new_df : The output dataframe, with a new index
+
+     """
+    new_df = df.copy()
     if lag == 0:
-        return newdataset
+        return new_df
 
     cols = get_columns(df, cols)
-    # if not(cols in self.columns) : return newdataset
+    # if not(cols in self.columns) : return new_df
     dfcols = pd.DataFrame(data=df[cols], columns=cols)
     # la série décalée
     # import pdb; pdb.set_trace()
@@ -793,31 +1207,54 @@ def apply_lag(df, lag=1, freq=None, cols=None, inplace=False):
     #  en cas de copie: on renvoie un dataset contenant les colonne décalées
     if inplace:
         for col in cols:
-            newdataset[col] = laggedseries[col]
+            new_df[col] = laggedseries[col]
     else:
-        newdataset = pd.DataFrame(index=laggedseries.index,
-                                  data=laggedseries.values,
-                                  columns=cols)
+        new_df = pd.DataFrame(index=laggedseries.index,
+                              data=laggedseries.values,
+                              columns=cols)
 
     # idx_all = pd.bdate_range(start=df.index[0], end=df.index[-1], freq=freq)
-    # newdataset = newdataset.reindex(index=idx_all, method=None)
+    # new_df = new_df.reindex(index=idx_all, method=None)
     # bday_us = CustomBusinessDay(calendar=USFederalHolidayCalendar())
-    # newdataset = newdataset.resample(bday_us)
+    # new_df = new_df.resample(bday_us)
     # # print('newda')
-    # print(newdataset)
-    # newdataset.to_csv('vv.csv')
-    return newdataset
+    # print(new_df)
+    # new_df.to_csv('vv.csv')
+    return new_df
 
 
 def apply_cumulative_return(df, timeweight=False, cols=None, inplace=True):
-    '''Renvoie le cumul composé des rendements'''
-    '''AMBIGU quand inplace=True, cols <> None'''
+
+    """
+     This function returns a compound cumulative returns
+
+     Parameters
+     ----------
+     df : {Dataframe type}
+           The input dataframe
+
+     timeweight : {Boolean type}
+                  Takes into account the duration between each date
+                  expressed in the natural frequency of the DF
+                   Default: False
+
+     cols  : {List type}
+             Default: None
+
+     inplace : {Boolean type}
+                Default: False
+
+     Return
+     ------
+     new_df : The output dataframe, with a new index
+
+     """
     cols = get_columns(df, cols)
     # pdb.set_trace()
     # datacols=pd.DataFrame(data=self [cols])
     if timeweight is True:
         deltatime = pd.Series(df.index.asi8)
-        deltatime = deltatime.diff(1) / glbNanoSexPerDay
+        deltatime = deltatime.diff(1) / glbnano
         deltatime.fillna(value=0.0, inplace=True)
         deltatime = deltatime / 365.25
         deltatime = deltatime.reshape(len(df.index), 1)
@@ -828,34 +1265,43 @@ def apply_cumulative_return(df, timeweight=False, cols=None, inplace=True):
     newcols = range(len(cols))
 
     if inplace:
-        newdataset = df
+        new_df = df
     else:
-        newdataset = pd.DataFrame(data=navdata)
+        new_df = pd.DataFrame(data=navdata)
     for icol, col in enumerate(cols):
         if inplace:
-            newdataset[col] = navdata[col]
+            new_df[col] = navdata[col]
 
-    newdataset.columns = newcols
+    new_df.columns = newcols
 
-    return newdataset
+    return new_df
 
 
 def apply_futures_roll(col_c1, col_c2, roll_dict):
+
     """
-            roll_futures:
-            Calculates roll_adjusted returns on a series of first and second futures, for a rolling rule
+     This function computes the roll_adjusted returns on a series of first and second futures,
+     for a rolling rule
 
-            df: dataframe containing two columns of closing prices for c1 and c2
-            roll_dict: dictionary describing the rolling rule, like in apply_roll_shift
-            col_c1: index of column storing contract 1 prices
-            col_c2: index of column storing contract 2 prices
+     Parameters
+     ----------
+     col_c1 : {Dataframe type}
+              The dataframe storing contract 1 prices
 
-            Returns:
-            a dataframe with the following columns:
-            C1: the price of c1 contract
-            C1_ROLL: the synthetic price of roll-adjusted c1 contract
-            RETURN_1D_AFTER_ROLL: the daily roll-adjusted return
-            """
+     col_c2 : {Dataframe type}
+              The dataframe storing contract 2 prices
+
+     roll_dict : {Dict type}
+                 A dictionary describing the rolling rule
+
+     Return
+     ------
+     new_df : The output dataframe, with the following columns:
+                C1: the price of c1 contract
+                C1_ROLL: the synthetic price of roll-adjusted c1 contract
+                RETURN_1D_AFTER_ROLL: the daily roll-adjusted return
+
+    """
     df = pd.concat([col_c1, col_c2], axis=1)
     df = df.fillna(method='ffill')
     # df.dropna(inplace=True)
@@ -904,22 +1350,33 @@ def apply_futures_roll(col_c1, col_c2, roll_dict):
 
 
 def apply_roll_shift(dates, roll_dict):
-    """
-    apply_roll_shift:
-    returns a series of rolling dates from an initial list of reference dates and a dictionary
 
-    dates: a list of dates
-    roll_dict: a dictionary with the following entries
-        'freq': the frequency of rolling dates, default 'BQ'
-        'day': if specified, the hard-coded calendar day in month of the rolling date, default -1(not specified)
-        'week': if day==-1, the index of week roll in month(starting at 0), default 0
-        'weekday': if day==-1, the index of day in week(starting at 0 for Mondays)
-        'bday_offset': an extra shift in business days, generally negative or zero, default 0
-        'bmonth_offset' an extra shift in months, generally negative or zero, default 0
-
-    RETURNS:
-    The list of last rolling dates preceding each element of the given reference dates
     """
+         This function returns a series of rolling dates from an initial list of reference dates and a dictionary
+
+         Parameters
+         ----------
+         dates : {List type}
+                  A list of dates
+
+         roll_dict : {Dictionary type}
+                      A dictionary with the following entries
+                     'freq': the frequency of rolling dates, default 'BQ'
+                     'day': if specified, the hard-coded calendar day in month of the rolling date,
+                            default -1(not specified)
+                     'week': if day==-1, the index of week roll in month(starting at 0),
+                             default 0
+                     'weekday': if day==-1, the index of day in week(starting at 0 for Mondays)
+                     'bday_offset': an extra shift in business days, generally negative or zero,
+                                    default 0
+                     'bmonth_offset': an extra shift in months, generally negative or zero,
+                                    default 0
+         
+         Return
+         ------
+         rolldates : The list of last rolling dates preceding each element of the given reference dates
+
+         """
     if type(dates) is not list:
         dates = [dates]
 
@@ -936,27 +1393,44 @@ def apply_roll_shift(dates, roll_dict):
     roll_day = roll_dict['day']
 
     # les dates de roll
-    df_rolldates = pd.DataFrame(index=b_enddates, columns=['LAST_TRADING_DATE'])
-    df_rolldates['LAST_TRADING_DATE'] = b_enddates
+    rolldates = pd.DataFrame(index=b_enddates, columns=['LAST_TRADING_DATE'])
+    rolldates['LAST_TRADING_DATE'] = b_enddates
     if roll_dict['bmonth_offset'] != 0:
-        df_rolldates['LAST_TRADING_DATE'] = map(lambda d: monthrollrule.rollback(d),
-                                                df_rolldates['LAST_TRADING_DATE'])
+        rolldates['LAST_TRADING_DATE'] = map(lambda d: monthrollrule.rollback(d),
+                                                rolldates['LAST_TRADING_DATE'])
     if roll_day >= 0:
-        df_rolldates['LAST_TRADING_DATE'] = map(lambda d: d.replace(day=roll_day),
-                                                df_rolldates['LAST_TRADING_DATE'])
+        rolldates['LAST_TRADING_DATE'] = map(lambda d: d.replace(day=roll_day),
+                                                rolldates['LAST_TRADING_DATE'])
     else:
-        df_rolldates['LAST_TRADING_DATE'] = map(lambda d: rollrule.rollback(d),
-                                                df_rolldates['LAST_TRADING_DATE'])
+        rolldates['LAST_TRADING_DATE'] = map(lambda d: rollrule.rollback(d),
+                                                rolldates['LAST_TRADING_DATE'])
 
     if roll_dict['bday_offset'] != 0:
-        df_rolldates['LAST_TRADING_DATE'] = map(lambda d: d + bdayrollrule,
-                                                df_rolldates['LAST_TRADING_DATE'])
-    df_rolldates.dropna(inplace=True)
-    return df_rolldates
+        rolldates['LAST_TRADING_DATE'] = map(lambda d: d + bdayrollrule,
+                                                rolldates['LAST_TRADING_DATE'])
+    rolldates.dropna(inplace=True)
+    return rolldates
 
 
 def fill_missing_values(idxmain, idxsubst, dfsubst=None):
-    '''Remplit les valeurs manquantes de la colonne idxmain par la colonne idxsubst '''
+    """
+    This function fills the missing values ​​of the idxmain column with the idxsubst column
+    Parameters
+    ----------
+    col_c1 : {Dataframe type}
+             The dataframe storing contract 1 prices
+
+    col_c2 : {Dataframe type}
+             The dataframe storing contract 2 prices
+
+    roll_dict : {Dict type}
+                A dictionary describing the rolling rule
+
+    Return
+    ------
+    new_df : The output dataframe
+
+       """
     df = pd.concat([idxmain, idxsubst], axis=1)
     if dfsubst is None:
         df2 = df
@@ -976,17 +1450,45 @@ def fill_missing_values(idxmain, idxsubst, dfsubst=None):
 
 
 def apply_ohlc_vol(df, OHLCcols=None,
-                             window=20, inpct=True,
-                             annualize=True,
-                             fillinit=True,
-                             algo='yang'):
+                       window=20, inpct=True,
+                     annualize=True,
+                     fillinit=True,
+                     algo='yang'):
     '''Renvoie la série des volatilités de rendements '''
+    pass
 
 
 def auto_categorize(df, mod=10, level_date=None, date_end=None, min_r=0.02):
-    ''' Renvoie une liste :(ds catégorisée ou None si on à moins de deux modalitées, nombre de modalités, les bins)'''
-    # pdb.set_trace()
-    ds_copy = df.copy()
+    """
+    This function returns a list: categorized DF
+    or None if we have less than two modalities,
+    bins are the number of modalities
+
+    Parameters
+    ----------
+    df : {Dataframe type}
+             The input dataframe
+
+    mod : {Dataframe type}
+             The dataframe storing contract 2 prices
+            Default: 10
+
+    level_date : {Datetime type}
+                A dictionary describing the rolling rule
+                Default: None
+
+    date_end : {Datetime type}
+                Default: None
+
+    min_r : {Float type}
+            Default: 0.02
+
+    Return
+    ------
+    new_df : The output dataframe
+
+       """
+    df_copy = df.copy()
     if date_end is not None:
         if ds_copy.index.nlevels == 1:
             ds_copy = ds_copy.loc[:date_end]
@@ -1004,30 +1506,31 @@ def auto_categorize(df, mod=10, level_date=None, date_end=None, min_r=0.02):
         bins[-1] = 10000000.
 
         def qq(serie, bins):
-            '''catégorise les colonnes d'un ds '''
+            '''catégorise les colonnes d'un DF '''
             res = pd.cut(serie, bins=bins, right=False, retbins=True, labels=False)[0]
             return res
 
-        def check_df(ds, min_r=min_r, bins=bins):
-            ''' vérification si toutes le modalitées couvre au moins minR%. Si ok on renvoi les bins d'origine, sinon on finsionne les modalités et en renvoi les bins'''
+        def check_df(df, min_r=min_r, bins=bins):
+            # vérification si toutes le modalitées couvre au moins minR%.
+            # Si ok on renvoi les bins d'origine, sinon on finsionne
+            # les modalités et en renvoi les bins
             bins_ = bins[:]
-            total = float(len(ds.dropna(how='all')))
-            # pdb.set_trace()
+            total = float(len(df.dropna(how='all')))
             for i in range(len(bins) - 1):
                 j = i + 1
                 try:
-                    v = len(ds.loc[(ds >= bins[i]) & (ds < bins[j])].dropna(how='all'))
+                    v = len(df.loc[(df >= bins[i]) & (df < bins[j])].dropna(how='all'))
                 except Exception as e:
-                    col_ = ds.columns[0]
-                    v = len(ds[col_].loc[(ds[col_] >= bins[i]) & (ds[col_] < bins[j])].dropna())
+                    col_ = df.columns[0]
+                    v = len(df[col_].loc[(df[col_] >= bins[i]) & (df[col_] < bins[j])].dropna())
                 if (v / total) < min_r:
                     bins_.remove(bins[j])
             return bins_
 
-        bins = check_df(ds_copy, min_r=min_r)
+        bins = check_df(df_copy, min_r=min_r)
         if len(bins) > 2:
-            ds = pd.DataFrame(df.copy().apply(lambda x: qq(x, bins)))
-            return ds  # , len(bins)-1, bins
+            df = pd.DataFrame(df.copy().apply(lambda x: qq(x, bins)))
+            return df  # , len(bins)-1, bins
         else:
             return np.nan  # , len(bins)-1, bins
     else:
@@ -1036,8 +1539,34 @@ def auto_categorize(df, mod=10, level_date=None, date_end=None, min_r=0.02):
 
 def categorize(df, quantilize=False, levels=2,
                cols=None, dstart=None, dend=None):
-    '''Renvoie la série des colonnes catégorisées; levels: entier ou tableau.'''
+    """
+    This function returns the series of categorized columns
 
+    Parameters
+    ----------
+    df : {Dataframe type}
+             The input dataframe
+
+    quantilize : {Boolean type}
+                 Default: False
+
+    levels : {Int type}
+            Default: 2
+
+    cols : {List type}
+            Default: None
+
+    dstart : {Datetime type}
+             Default: None
+
+    dend : {Datetime type}
+            Default: None
+
+    Return
+    ------
+    new_df : The output dataframe
+
+       """
     new_df = df.copy()
 
     cols = get_columns(new_df, cols)
@@ -1074,37 +1603,77 @@ def categorize(df, quantilize=False, levels=2,
 
 
 def take_interval(df, dstart=None, dend=None, inplace=False):
-        ''' Prend une tranche temporelle [dstart, dend] '''
-        ''' cas normal: type(dstart) == type(dend) == str'''
-        # pdb.set_trace()
-        if len(df.index) == 0:
-            return df
-        if dstart is None or dstart == '':
-            dstart = df.index[0]
-        else:
-            dstart = pd.to_datetime(dstart)
 
-        if dend is None or dend == '':
-            dend = df.index[-1]
-        else:
-            dend = pd.to_datetime(dend)
+    """
+       This function takes a time slice: [dstart, dend]
 
-        if (dstart <= df.index[0]) and (dend >= df.index[-1]):
-            return df
 
-        if inplace:
-            # ds=self._as_TDataSet(self [str(dstart) : str(dend)])
-            ds = df.loc[df.index <= str(dend)]
-            ds = df.loc[df.index >= str(dstart)]
-        else:
-            # modif a confirmer
-            ds = pd.DataFrame(data=df[str(dstart): dend.strftime("%Y-%m-%d")])
-        return ds
+       Parameters
+       ----------
+       df : {Dataframe type}
+                The input dataframe
+
+       dstart : {Datetime type}
+                Default: None
+
+       dend : {Datetime type}
+               Default: None
+
+       inplace : {Boolean type}
+              Default: False
+
+       Return
+       ------
+       new_df : The output dataframe
+
+    """
+
+    if len(df.index) == 0:
+        return df
+    if dstart is None or dstart == '':
+        dstart = df.index[0]
+    else:
+        dstart = pd.to_datetime(dstart)
+
+    if dend is None or dend == '':
+        dend = df.index[-1]
+    else:
+        dend = pd.to_datetime(dend)
+
+    if (dstart <= df.index[0]) and (dend >= df.index[-1]):
+        return df
+
+    if inplace:
+        # ds=self._as_TDataSet(self [str(dstart) : str(dend)])
+        ds = df.loc[df.index <= str(dend)]
+        ds = df.loc[df.index >= str(dstart)]
+    else:
+        # modif a confirmer
+        ds = pd.DataFrame(data=df[str(dstart): dend.strftime("%Y-%m-%d")])
+    return ds
 
 
 def calc_modified_duration(df, n, cols=None):
-    ''' Renvoie la série des sensibilités=modified duration'''
-    ''' Pour une série de taux et une maturité '''
+    """
+        This function returns the sensitivity series,
+        for a series of rates and a maturity
+
+        Parameters
+        ----------
+        df : {Dataframe type}
+                 The input dataframe
+
+        n : {Int type}
+            A maturity
+
+        cols : {List type}
+                Default: None
+
+        Return
+        ------
+        new_df : The output dataframe
+
+     """
 
     cols = take_columns(df, cols)
     cols = np.maximum(cols, 1e-5)
@@ -1127,24 +1696,69 @@ def calc_modified_duration(df, n, cols=None):
 
 
 def time_columns(df):
-    '''Calcule les variables de saisonnalité directes et décalées '''
-    ds = pd.DataFrame(index=df.index,
-                      columns=[glbMetaVarPrefix + 'DATE', 'MOIS', 'MOIS_', 'JMOIS', 'JMOIS_', 'JSEM', 'JSEM_'])
-    ds[glbMetaVarPrefix + 'DATE'] = df.index.year * 10000 + self.index.month * 100 + df.index.day
-    ds['MOIS'] = df.index.month
-    ds['MOIS_'] = (df.index.month + 6) % 12
-    ds['JMOIS'] = df.index.day
-    ds['JMOIS_'] = (df.index.day + 15) % 31
-    ds['JSEM'] = (np.rint(df.index.asi8 / glbNanoSexPerDay)) % 7
-    ds['JSEM_'] = (np.rint(df.index.asi8 / glbNanoSexPerDay) + 3) % 7
-    return ds
+    """
+        This function computes the direct and lagged seasonality variables
+
+        Parameters
+        ----------
+        df : {Dataframe type}
+                 The input dataframe
+
+        Return
+        ------
+        df : The output dataframe
+
+     """
+    df = pd.DataFrame(index=df.index,
+                      columns=[glbmetavar + 'DATE', 'MOIS', 'MOIS_', 'JMOIS', 'JMOIS_', 'JSEM', 'JSEM_'])
+    df[glbmetavar + 'DATE'] = df.index.year * 10000 + df.index.month * 100 + df.index.day
+    df['MOIS'] = df.index.month
+    df['MOIS_'] = (df.index.month + 6) % 12
+    df['JMOIS'] = df.index.day
+    df['JMOIS_'] = (df.index.day + 15) % 31
+    df['JSEM'] = (np.rint(df.index.asi8 / glbnano)) % 7
+    df['JSEM_'] = (np.rint(df.index.asi8 / glbnano) + 3) % 7
+    return df
 
 
 def apply_filter(df, period=1, min_value=np.NINF, max_value=np.inf, diff_order=1, inpct=True,
                  cols=None):
-    #  Renvoie une copie de l'objet courant en annulant les valeurs abbérentes correspondant à des rendements
-    #  ou à des valeurs en dehors des limites min_value et max_value
+    """
+     This function returns a copy of the current object by canceling
+     the abberate values ​​corresponding to returns
+     or values ​​outside the min_value and max_value limits
 
+     Parameters
+     ----------
+     df : {Dataframe type}
+           The input dataframe
+
+     period : {Int type}
+               Default: 1
+
+     min_value : {Float type}
+                 Default: np.NINF
+
+     max_value : {Float type}
+                  Default: np.inf
+
+     diff_order : {Int type}
+                   Default: 1
+
+     inpct : {Boolean type}
+              If True: the series of geometric returns are calculated
+              else: the series of arithmetic returns is calculated
+              Default: True
+
+     cols : {List type}
+            Default: None
+
+     Return
+     ------
+     new_df : The output dataframe
+
+      """
+    df = df.copy()
     cols = get_columns(df, cols)
     datacols = df[cols]
 
@@ -1209,529 +1823,8 @@ def apply_filter(df, period=1, min_value=np.NINF, max_value=np.inf, diff_order=1
         else:
             delta_data = delta_data.add(first_value, axis=1)
 
-    newdataset = pd.DataFrame(index=delta_data.index,
+    new_df = pd.DataFrame(index=delta_data.index,
                           data=delta_data.values,
                           columns=cols)
 
-    return newdataset
-# def apply_ohlc_vol(df,
-#                    window=20,
-#                    annualize=True,
-#                    fillinit=True,
-#                    inpct=True,
-#                    ohlccols=None,
-#                    algo='yang'
-#                    ):
-#     '''Renvoie la série des volatilités de rendements '''
-#
-#     cols = get_columns(df, ohlccols)
-#     if len(cols) < 4:
-#         return None
-#
-#     ocol = cols[0]
-#     hcol = cols[1]
-#     lcol = cols[2]
-#     ccol = cols[3]
-#     if inpct:
-#         oreturn = self[ocol] / self[ccol].shift(1) - 1
-#         creturn = self[ccol] / self[ocol] - 1
-#         hreturn = self[hcol] / self[ocol] - 1
-#         lreturn = self[lcol] / self[ocol] - 1
-#     else:
-#         oreturn = self[ocol] - self[ccol].shift(1)
-#         creturn = self[ccol] - self[ocol]
-#         hreturn = self[hcol] - self[ocol]
-#         lreturn = self[lcol] - self[ocol]
-#
-#     ovar = pd.rolling_var(oreturn, window=window)
-#     closevar = pd.rolling_var(oreturn + creturn, window=window)
-#
-#     if algo == 'park':
-#         lhvar = pd.rolling_var(hreturn - lreturn, window=window)
-#         retvar = lhvar / (4 * math.log(2))
-#     else:
-#         sqret = hreturn * (hreturn - creturn) + lreturn * (lreturn - creturn)
-#         if algo == 'rogers':
-#             retvar = pd.rolling_mean(sqret, window=window)
-#         elif algo == 'yang':
-#             k = 0.0783
-#             sqret = hreturn * (hreturn - creturn) + lreturn * (lreturn - creturn)
-#             retvar = ovar + k * closevar + (1 - k) * pd.rolling_mean(sqret, window=window)
-#
-#     voldata = np.sqrt(retvar)
-#     if fillinit:
-#         voldata[0: window + 1] = voldata[0: window + 1].fillna(method='bfill')
-#     voldata = voldata.dropna()
-#     annfactor = 1
-#     # pdb.set_trace()
-#     # voldata=pd.rolling_mean(diffdata, window=window)
-#     volname = self.name + glbFieldSep + 'VOL' + algo[0] + '@' + str(window)
-#     if annualize:
-#         nfreqdict = self.estimate_nat_freq(cols[0])
-#         nfreq = max(1, nfreqdict['min'])
-#         annfactor = math.sqrt(260 / nfreq)
-#     else:
-#         annfactor = 1
-#
-#     newdataset = TDataSet(voldata * annfactor)
-#     # nom de la colonne: radical + Vol
-#     newdataset.name = volname
-#     newdataset.columns = [volname]
-#     return newdataset
-#
-# def apply_timeshift(df, freq, shift=0):
-#         """
-#         Renvoie une copie de l'objet courant, avec dates translatées
-#         d'un délai.
-#         Les noms de colonnes de l'objet courant ne sont pas modifiés.
-#         freq représente l''unité de compte du décalage
-#         ownfreq représente la fréquence finale(propre) de la série.
-#         refdate: date de calcul. si fournie, les décalages sont limités
-#         à cette date
-#         Exemple: décaler de 20j une série trimestrielle
-#         """
-#         # Shiffting with a given shift
-#
-#         ndf = df.tshift(shift, freq)
-#         return ndf
-#
-#
-# def apply_combi(df1, df2, coeff1, coeff2, islinear, transfo=None):
-#     dfs = pd.DataFrame()
-#     dfx, dfy = reindex(df1, df2)
-#     if islinear:
-#         dfs = coeff1 * dfx + coeff2 * dfy
-#     else:
-#         dfs = (coeff1 ** dfx) * (coeff2 ** dfy)
-#
-#     if transfo is not None:
-#         if str(transfo).lower() == 'tanh':
-#             transfo_df = np.tanh(dfs)
-#         elif str(transfo).lower() == 'sign':
-#             transfo_df = np.sign(dfs)
-#         return transfo_df
-#     else:
-#         return dfs
-#
-#
-# def apply_corr(df, period=1, exponential=True, inpct=True, lag=0, span=20):
-#     """
-#
-#     :param df:
-#     :param period:
-#     :param span:
-#     :param exponential:
-#     :param inpct:
-#     :param lag:
-#     :return:
-#     '''Renvoie la série des corrélations entre deux colonnes d'un Dataset
-#            period: si 0, corrélation des valeurs, si > 0, corrélation des
-#            variations sur period
-#            lag: retard sur la seconde colonne
-#            cols: spécifications de 1 ou 2 colonnes
-#     rolling_corr(data1, data2, window=span)
-# """
-#
-#     # #  si period == 0 c'est l'autocorrélation des valeurs
-#     # #  et non des variations qui est calculée
-#     startval = period + lag * period
-#     if period == 0:
-#         data1 = df
-#         data2 = df.shift(periods=lag)
-#     else:
-#         if inpct:
-#             data1 = df.pct_change(period)[startval:]
-#             data2 = df.pct_change(period).shift(periods=lag * period)[startval:]
-#         else:
-#             data1 = df.diff(period)[startval:]
-#             data2 = df.diff(period).shift(periods=lag * period)[startval:]
-#
-#     if exponential:
-#         corrdata = pd.ewmcorr(data1[startval:], data2[startval:], span=span)
-#     else:
-#         corrdata = pd.rolling_corr(data1, data2, window=span)
-#
-#     corrdata = corrdata.dropna()
-#     return corrdata
-#
-#
-# def apply_pctdelta(df, period, freq, inpct):
-#
-#     if inpct:
-#         deltadata = df.pct_change(period)
-#     else:
-#         deltadata = df.diff(period)
-#
-#     idx_all = pd.bdate_range(start=(deltadata.index[0]).date(),
-#                              end=(deltadata.index[-1]).date(),
-#                              freq=freq)
-#
-#     # Reindex using datetime index, to drop hours and minutes
-#     deltadata.index = pd.DatetimeIndex(deltadata.index).normalize()
-#     if(freq == 'B' or freq == 'D'):
-#         deltadata = deltadata.reindex(index=idx_all, method=None)
-#
-#     else:
-#         deltadata = deltadata.reindex(index=idx_all, method='pad')
-#
-#     return deltadata
-#
-#
-# def apply_rolling(df1, df2, rollfreq, iweek, iday, iroll_interval, freq):
-#     """
-#         Renvoie la série des variations d'une colonne pour un décalage donné.
-#         Dans le calcul de V(t) / V(t - p), V est la série principale self [maincol].
-#         Par exception, aux dates spécifiées par la règle rolldate, on calcule V(t) / Vsubst(t-p),
-#         où Vsubst représente la série self [substcol]
-#     """
-#     # élargir le calendrier pour inclure les dates de rolls de façon certaine
-#     idx_all = pd.bdate_range(start=(df1.index[0]).date(),
-#                              end=(df1.index[-1]).date(),
-#                              freq=freq)
-#     df1.index = pd.DatetimeIndex(df1.index).normalize()
-#     data = df1.reindex(index=idx_all, method=None)
-#     rolldates = pd.bdate_range(data.index[0], data.index[-1], freq=rollfreq)
-#     rolldates = rolldates + pd.datetools.WeekOfMonth(week=iweek, weekday=iday)
-#
-#
-# def apply_ewma(df, emadecay, wres, wz):
-#     """
-#     Renvoie la série des ema d un ensemble de colonnes pour une pseudo durée(span) donnée
-#      self: contient la totalité des données primaires dont on veut calculer la moyenne
-#     emadecay: coefficient d'atténuation de la moyenne(proche de 1). Prioritaire si fourni.
-#     span: 2/emadecay - 1
-#     cols: groupe de colonnes dont on calcule l'ewma.
-#     wres: si True, on calcule également le résidu
-#     normalize: si True, on calcule aussi le Z-Score(résidu / ewmastd(même span))
-#     histoemadata: série facultative contenant les valeurs historiques de l'ewma sur des dates
-#        normalement antérieures aux données primaires.
-#     overridedepth: nombre de jours passés(à partir de la donnée la plus récente) à recalculer
-#     """
-#     stdev_min = 1e-5
-#     rescols = pd.DataFrame()
-#     zcols = pd.DataFrame()
-#     # calculer la période synthétique correspondant au coeff s'il est fourni
-#     if type(emadecay) in [int, float]:
-#         if emadecay > 0:
-#             span = (2.0 / emadecay) - 1
-#     df_calc = pd.ewma(df, span=span, adjust=True)
-#     # calcul du résidu
-#     if wres:
-#         rescols = df - df_calc
-#         # calcul du ZScore
-#         if wz:
-#             stdevcols = pd.ewmstd(rescols, span=span)
-#             stdevcols[stdevcols <= stdev_min] = np.nan
-#             zcols = rescols * 0.0
-#             zcols[stdevcols > 0] = rescols[stdevcols > 0] / stdevcols[stdevcols > 0]
-#
-#     if not wres:
-#         return df_calc
-#     elif wz is True:
-#         return  zcols
-#     else:
-#         return  rescols
-#
-#
-# def apply_fill(df1, df2, dfsubst):
-#
-#     return None
-#
-#
-# def apply_roll_shift(dates, roll_dict):
-#     """
-#     apply_roll_shift:
-#     returns a series of rolling dates from an initial list of reference dates and a dictionary
-#
-#     dates: a list of dates
-#     roll_dict: a dictionary with the following entries
-#         'freq': the frequency of rolling dates, default 'BQ'
-#         'day': if specified, the hard-coded calendar day in month of the rolling date, default -1(not specified)
-#         'week': if day==-1, the index of week roll in month(starting at 0), default 0
-#         'weekday': if day==-1, the index of day in week(starting at 0 for Mondays)
-#         'bday_offset': an extra shift in business days, generally negative or zero, default 0
-#         'bmonth_offset' an extra shift in months, generally negative or zero, default 0
-#
-#     RETURNS:
-#     The list of last rolling dates preceding each element of the given reference dates
-#     """
-#     if type(dates) is not list:
-#         dates = [dates]
-#
-#     roll_freq = roll_dict['freq']
-#     # les dates de fin de périodes(mois ou trimestre ouvré)
-#     b_enddates = pd.bdate_range(dates[0], dates[-1], freq=roll_freq)
-#     b_enddates = map(lambda d: d.replace(hour=dates[0].hour,
-#                                          minute=dates[0].minute,
-#                                          second=dates[0].second), b_enddates)
-#     rollrule = pd.datetools.WeekOfMonth(weekday=roll_dict['weekday'],
-#                                         week=roll_dict['week'])
-#     bdayrollrule = pd.datetools.BDay(n=roll_dict['bday_offset'])
-#     monthrollrule = pd.datetools.BMonthEnd(n=roll_dict['bmonth_offset'])
-#     roll_day = roll_dict['day']
-#
-#     # les dates de roll
-#     df_rolldates = pd.DataFrame(index=b_enddates, columns=['LAST_TRADING_DATE'])
-#     df_rolldates['LAST_TRADING_DATE'] = b_enddates
-#     if roll_dict['bmonth_offset'] != 0:
-#         df_rolldates['LAST_TRADING_DATE'] = map(lambda d: monthrollrule.rollback(d),
-#                                                 df_rolldates['LAST_TRADING_DATE'])
-#     if roll_day >= 0:
-#         df_rolldates['LAST_TRADING_DATE'] = map(lambda d: d.replace(day=roll_day),
-#                                                 df_rolldates['LAST_TRADING_DATE'])
-#     else:
-#         df_rolldates['LAST_TRADING_DATE'] = map(lambda d: rollrule.rollback(d),
-#                                                 df_rolldates['LAST_TRADING_DATE'])
-#
-#     if roll_dict['bday_offset'] != 0:
-#         df_rolldates['LAST_TRADING_DATE'] = map(lambda d: d + bdayrollrule,
-#                                                 df_rolldates['LAST_TRADING_DATE'])
-#     df_rolldates.dropna(inplace=True)
-#     return df_rolldates
-#
-#
-# def apply_futures_roll(df1, df2, rolldict):
-#     """
-#     roll_futures:
-#     Calculates roll_adjusted returns on a series of first and second futures, for a rolling rule
-#
-#     df: dataframe containing two columns of closing prices for c1 and c2
-#     roll_dict: dictionary describing the rolling rule, like in apply_roll_shift
-#     col_c1: index of column storing contract 1 prices
-#     col_c2: index of column storing contract 2 prices
-#
-#     Returns:
-#     a dataframe with the following columns:
-#     C1: the price of c1 contract
-#     C1_ROLL: the synthetic price of roll-adjusted c1 contract
-#     RETURN_1D_AFTER_ROLL: the daily roll-adjusted return
-#     """
-#     df = pd.concat([df1, df2], axis=1)
-#     df.dropna(inplace=True)
-#     h_c1, m_c1, s_c1 = df.index[0].hour, df.index[0].minute, df.index[0].second
-#     dstart = df.index[0]
-#     dend = df.index[-1]
-#     bdates = pd.bdate_range(dstart, dend, freq='B')
-#     bdates = map(lambda d: d.replace(hour=h_c1, minute=m_c1, second=s_c1), bdates)
-#     # les dates de roll
-#     df_rolldates = apply_roll_shift(bdates, rolldict)
-#     # les rendements quotidiens
-#     df1 = df[df.columns[0]]
-#     df2 = df[df.columns[1]]
-#
-#     df_ret1 = df1.dropna().pct_change(periods=1)
-#     df_ret1.columns = ['RETURN_1D']
-#     # rendements modifiés après prise en compte du roll
-#     # df_ret1['RETURN_1D_AFTER_ROLL'] = df_ret1['RETURN_1D']
-#     # le jour suivant le roll dans le calendrier du contrat
-#     df_ret1['NEXT_BDATE'] = np.nan
-#     df_ret1['NEXT_BDATE'][:-1] = df_ret1.index[1:]
-#     # les cours des 2 premiers contrats
-#     df_ret1['C1'] = df1.dropna()
-#     df_ret1['C2'] = df2.dropna()
-#     # # le ratio c1 / c2 prolongé à tous les jours cotés
-#     # df_ret1['RATIO12'] = (df_ret1['C1'] / df_ret1['C2']).fillna(method='ffill')
-#     # next_bd_after_roll = df_ret1.loc[df_rolldates['LAST_TRADING_DATE'],
-#     #                                  'NEXT_BDATE'].fillna(method='ffill').fillna(method='bfill')
-#     # df_ret1.loc[next_bd_after_roll, 'RETURN_1D_AFTER_ROLL'] = 1.0 + df_ret1.loc[
-#     #     next_bd_after_roll, 'RETURN_1D_AFTER_ROLL']
-#     # df_ret1.loc[next_bd_after_roll, 'RETURN_1D_AFTER_ROLL'] *= df_ret1.loc[next_bd_after_roll, 'RETURN_1D_AFTER_ROLL'] * \
-#     #                                                            df_ret1.loc[
-#     #                                                                df_rolldates['LAST_TRADING_DATE'], 'RATIO12'].values
-#     # df_ret1.loc[next_bd_after_roll, 'RETURN_1D_AFTER_ROLL'] = df_ret1.loc[
-#     #                                                               next_bd_after_roll, 'RETURN_1D_AFTER_ROLL'] - 1.0
-#     #
-#     # df_roll = pd.DataFrame(index=df_ret1.index, columns=['C1', 'C1_ROLL', 'RETURN_1D_AFTER_ROLL', 'RETURN_1D', 'C2'])
-#     # df_roll['C1_ROLL'] = 1.0
-#     #
-#     # roll_ret = np.log(1 + df_ret1.loc[:, 'RETURN_1D_AFTER_ROLL'])
-#     # roll_ret = pd.expanding_sum(roll_ret)
-#     # roll_nav = np.exp(roll_ret)
-#     # df_roll['C1_ROLL'] = roll_nav * df.iloc[0, 0]
-#     # df_roll['C1'] = df.take_columns(col_c1)
-#     # df_roll['RETURN_1D_AFTER_ROLL'] = df_ret1.loc[:, 'RETURN_1D_AFTER_ROLL']
-#     # df_roll['RETURN_1D'] = df_ret1.loc[:, 'RETURN_1D']
-#     # df_roll['C2'] = df_ret1.loc[:, 'C2']
-#     return df_ret1
-#
-#
-# def estimate_nat_freq(df):
-#     '''Estime la fréquence naturelle d'une série: la fréquence des changements de valeur '''
-#     df.dropna()
-#     df.sort_index(inplace=True)
-#     fl = float((df.index.asi8[-1] - df.index.asi8[0]) / glbnano)
-#
-#     # série des différences
-#     ddf = df.diff(1)
-#     # série des différences non nulles
-#     ddf = df[ddf != 0]
-#     # rajouter une colonne pour les différences de dates
-#     ddf['deltat'] = 0
-#     ddf.deltat[1:] = (ddf.index.asi8[1:] - ddf.index.asi8[: -1]) / glbnano
-#     # trier les intervalles entre changements de dates
-#     lastdelta = ddf.ix[-1]
-#     ddf.sort(columns='deltat', inplace=True)
-#     l = len(ddf)
-#     deltat = ddf.deltat[1:]
-#     fdict = {}
-#
-#     if l > 1:
-#         fdict['last'] = lastdelta
-#         fdict['min'] = mind = deltat.min()
-#         fdict['datemin'] = deltat.idxmin()
-#         fdict['pct5'] = mind
-#         fdict['pct10'] = mind
-#         fdict['pct25'] = mind
-#         fdict['median'] = deltat.ix[int(0.5 * l) - 1]
-#         fdict['max'] = maxd = deltat.max()
-#         fdict['datemax'] = deltat.idxmax()
-#         fdict['pct95'] = maxd
-#         fdict['pct90'] = maxd
-#         fdict['pct75'] = maxd
-#         fdict['n1'] = len(deltat[deltat >= 1])
-#         fdict['r1'] = fdict['n1'] / fl
-#         fdict['n5'] = len(deltat[deltat >= 5])
-#         fdict['r5'] = fdict['n5'] / (fl / 5)
-#         fdict['n10'] = len(deltat[deltat >= 10])
-#         fdict['r10'] = fdict['n10'] / (fl / 10)
-#         fdict['n20'] = len(deltat[deltat >= 20])
-#         fdict['r20'] = fdict['n20'] / (fl / 20)
-#         if l > 4:
-#             fdict['pct25'] = deltat.ix[int(0.25 * l) - 1]
-#             fdict['pct75'] = deltat.ix[int(0.75 * l) - 1]
-#             if l > 10:
-#                 fdict['pct10'] = deltat.ix[int(0.1 * l) - 1]
-#                 fdict['pct90'] = deltat.ix[int(0.9 * l) - 1]
-#                 if l > 20:
-#                     fdict['pct5'] = deltat.ix[int(0.05 * l) - 1]
-#                     fdict['pct95'] = deltat.ix[int(0.95 * l) - 1]
-#     return fdict
-#
-#
-# def apply_vol(df, period, window, inpct, annualize, fillinit, freq):
-#     '''Renvoie la série des volatilités de rendements '''
-#     if period != 0:
-#         diffdata = apply_pctdelta(df, period, freq, inpct)
-#     else:
-#         diffdata = df
-#     voldata = pd.rolling_std(diffdata, window=window)
-#     if fillinit:
-#         voldata[0: window] = voldata[0: window + 1].fillna(method='bfill')
-#     voldata = voldata.dropna()
-#     cols = df.columns
-#     newcols = range(len(cols))
-#     for icol, col in enumerate(cols):
-#         if annualize:
-#             nfreqdict = estimate_nat_freq(col)
-#             nfreq = max(1, nfreqdict['min'])
-#             annfactor = math.sqrt(260 / nfreq)
-#         else:
-#             annfactor = 1
-#         newdf = voldata[voldata.columns[icol]] * annfactor
-#
-#     return newdf
-#
-#
-# def apply_ohlcvol(df):
-#     pass
-#
-#
-# def apply_cumulative_return(df, timeweight=False):
-#     '''Renvoie le cumul composé des rendements'''
-#     '''AMBIGU quand inplace=True, cols <> None'''
-#     if timeweight is True:
-#         deltatime = pd.Series(df.index.asi8)
-#         deltatime = deltatime.diff(1) / glbnano
-#         deltatime.fillna(value=0.0, inplace=True)
-#         deltatime = deltatime / 365.25
-#         deltatime = deltatime.reshape(len(df.index), 1)
-#         df = df * deltatime
-#     navdata = np.log(1 + df)
-#     navdata = pd.expanding_sum(navdata)
-#     navdata = np.exp(navdata)
-#     return navdata
-
-# def apply_rolling(df1, df2,  rollfreq, iday, iweek, effectiveroll_lag=0, inpct=True):
-#     '''
-#     Renvoie la série des variations d'une colonne pour un décalage donné.
-#     Dans le calcul de V(t) / V(t - p), V est la série principale self [maincol].
-#     Par exception, aux dates spécifiées par la règle rolldate, on calcule V(t) / Vsubst(t-p),
-#     où Vsubst représente la série self [substcol]
-#     '''
-#
-#     assert type(rollfreq) == str
-#     assert iday >= 0
-#     assert iweek >= 0
-#     period = 1
-#     # assert type(period) == int
-#     # assert period > 0
-#     assert effectiveroll_lag in [0, 1]
-#
-#     # cols1 = get_columns(df1)
-#     # cols2 = get_columns(df2)
-#     # cols = [cols1, cols2]
-#     # if cols is None:
-#     #     return None
-#     dfx, dfy = reindex(df1, df2)
-#     df = pd.concat([dfx, dfy], axis=1)
-#     # maincol = cols[0]
-#     # substcol = cols[1]
-#     # datacols = df[maincol]
-#
-#     if not inpct:
-#         retdata = dfx.diff(period)
-#     else:
-#         retdata = dfx.pct_change(period)
-#     idx_all = pd.bdate_range(start=dfx.index[0], end=dfx.index[-1], freq='B')
-#     # effacer l'heure pour synchronisation
-#     retdata = set_daytime(retdata, datetime(2000, 1, 1))
-#     set_daytime(dfx, datetime(2000, 1, 1))
-#     # élargir le calendrier pour inclure les dates de rolls de façon certaine
-#     retdata = retdata.reindex(index=idx_all, method=None)
-#
-#     # générer la série des dates de roll
-#     #          if rollfreq [1:].find('BS') < 0:
-#     #              rollfreq=rollfreq + 'BS'
-#     rolldates = pd.bdate_range(start=dfx.index[0], end=dfx.index[-1], freq=rollfreq)
-#     rolldates = rolldates + pd.datetools.WeekOfMonth(week=iweek, weekday=iday)
-#     # Ne garder que les dates de roll antérieures aux données courantes
-#     rolldates = rolldates[rolldates <= retdata.index[-1]]
-#     daybefore_rolldates = rolldates + pd.datetools.BDay(-period)
-#     dayafter_rolldates = rolldates + pd.datetools.BDay(period)
-#
-#     # timeidx=self.index
-#     # Contrat M(front) coté jusqu'à TRoll, traité jusqu'en TRoll-1, roulé en TRoll-1
-#     # Contrat M+1(next), coté jusqu'à TRoll, devient le front en TRoll + 1, traité en TRoll-1
-#     # Returns:
-#     #  en TRoll, Close(F2, TRoll)/ Close(F2, TRoll-1) - 1
-#     #  en TRoll + 1, Close(F1, TRoll+1)/ Close(F2, TRoll-1) - 1
-#     # dayafter_roll_contract=maincol
-#     # cas de UX
-#     if effectiveroll_lag == 0:
-#         roll_contract = dfx
-#         daybefore_roll_contract = dfx
-#     # cas de FVS
-#     else:
-#         roll_contract = dfy
-#         daybefore_roll_contract = dfy
-#
-#     if inpct:
-#         rollday_returns = dfx.loc[rolldates, roll_contract].values / \
-#                           dfx.loc[daybefore_rolldates, daybefore_roll_contract].values - 1
-#         dayafter_returns = dfx.loc[dayafter_rolldates, dfx].values / \
-#                            dfx.loc[rolldates, dfy].values - 1
-#     else:
-#         rollday_returns = dfx.loc[rolldates, roll_contract].values - \
-#                           dfx.loc[daybefore_rolldates, daybefore_roll_contract].values
-#         dayafter_returns = dfx.loc[dayafter_rolldates, dfx].values - \
-#                            dfx.loc[rolldates, dfy].values
-#
-#     retdata.loc[rolldates, dfx] = rollday_returns
-#     retdata.loc[dayafter_rolldates, dfx] = dayafter_returns
-#
-#     newdataset = pd.DataFrame(index=retdata.index,
-#                               data=retdata.values,
-#                               columns=var_name)
-#     # revenir au calendrier restreint
-#     newdataset = newdataset.dropna()
-#     return newdataset
+    return new_df
