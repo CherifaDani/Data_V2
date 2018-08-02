@@ -185,7 +185,7 @@ class Variable(object):
                 self.get_param('path'),
                 self.get_param('var_type'))
 
-    def read_var(self, csv_path):
+    def read_var(self, csv_path=None):
         """
         This function reads a csv file
 
@@ -200,7 +200,10 @@ class Variable(object):
              The dataframe of the csv file with a sorted time index
 
         """
+        if csv_path is None:
+            csv_path = self.get_param('path')
         var_name = self.get_param('var_name')
+
         df = data_utils.load_var(path=csv_path, var_name=var_name)
         return df
 
@@ -407,7 +410,7 @@ class Variable(object):
         var_name = self.get_param('var_name')
         script_path = self.get_param('script_path')
         state_path = self.get_param('state_path')
-
+        df_derived = self.read_var()
         # Retrieving the parents of the variable
         parents = list(set(parents))
         len_parents = len(parents)
@@ -444,7 +447,7 @@ class Variable(object):
             # logger.warn('{} {} {}'.format(path, operation,
             #                              self.get_param('var_type')))
             map(lambda x: x.update(), var_list)
-            self.deriv_var(var_list, operation, derived_params)
+            self.deriv_var(var_list=var_list, operation=operation, derived_params=derived_params, histodata=df_derived)
             # last_update
             # map(lambda x: x.write_state_var(), var_list)
         return var_list
@@ -470,15 +473,16 @@ class Variable(object):
         else:
             self.update_deriv()
 
-    def deriv_var(self, var_list, operation, derived_params):
+    def deriv_var(self, var_list, operation, derived_params, histodata):
         map(lambda x: x.write_dict(), var_list)
         freq = self.get_param('freq')
         var_name = self.get_param('var_name')
 
-        df_calc = derivation_calculs.apply_operation(var_list,
-                                                     freq,
-                                                     operation,
-                                                     derived_params)
+        df_calc = derivation_calculs.apply_operation(var_list=var_list,
+                                                     freq=freq,
+                                                     operation=operation,
+                                                     derived_params=derived_params,
+                                                     histodata=histodata)
         path = self.get_param('path')
 
         if df_calc is not None:

@@ -257,7 +257,7 @@ def get_columns(df, cols=None, forceuppercase=True):
             return []
 
 
-def apply_timeshift(df, shift=1, freq='B', ownfreq=None, refdate=None):
+def apply_timeshift(df, shift=1, freq='B', ownfreq=None, refdate=None, histodata=None):
     """
     This function returns a copy of the current dataframe, with translated dates of a delay(shift).
 
@@ -281,9 +281,28 @@ def apply_timeshift(df, shift=1, freq='B', ownfreq=None, refdate=None):
     A shifted dataframe
     """
     new_df = df.copy()
-
     # pas de décalage: on peut changer la fréquence
     # if freq <> 'B':
+    # if histodata is not None:
+    #     if df.index[-1] > histodata.index[-1]:
+    #         dend = df.index[-1]
+    #         dstart = histodata.index[-1]
+    #         df_calc = take_interval(df, dstart=dstart, dend=dend, inplace=False)
+    #         # print(df_calc)
+    #         # dfx = df_calc.tshift(2, freq=freq)
+    #         # print(dfx)
+    #         # dfy = dfx.append(df_calc)
+    #         # dfy.sort_index(ascending=True, inplace=True)
+    #         # print(dfy)
+    #         # dfy = dfy[~dfy.index.duplicated(take_last=False)]
+    #         # ndf = histodata.append(dfy)
+    #         # ndf.sort_index(ascending=True, inplace=True)
+    #         # # ndf = ndf[~ndf.index.duplicated(take_last=True)]
+    #         # print ndf
+    #     else:
+    #         return histodata
+
+    # else:
     if ownfreq is not None and ownfreq != freq:
         pass
         # new_df=new_df.change_freq(freq=ownfreq)
@@ -533,22 +552,22 @@ def take_columns(df, cols=None, forceuppercase=True):
 
     Return
     ------
-    ds : The output dataframe
+    new_df : The output dataframe
     """
     if cols is None:
         return df
     columns = get_columns(df, cols=cols, forceuppercase=forceuppercase)
     if len(columns) > 0:
         try:
-            ds = pd.DataFrame(index=df.index,
-                              data=df[columns],
-                              columns=columns)
+            new_df = pd.DataFrame(index=df.index,
+                                  data=df[columns],
+                                  columns=columns)
 
         except Exception as e:
             return None
     else:
-        ds = None
-    return ds
+        new_df = None
+    return new_df
 
 
 def apply_ewma(df, emadecay=None, span=1, inplace=True,
@@ -603,59 +622,83 @@ def apply_ewma(df, emadecay=None, span=1, inplace=True,
     ------
     new_df : The output dataframe
     """
-    usehistoforinit = False
-    if (histoemadata is not None) \
-            and (type(histoemadata) == type(df)) \
-            and (len(histoemadata.index) > 0) \
-            and np.array_equiv(df.columns, histoemadata.columns):
-        if (histoemadata.index[0] <= df.index[-1 - overridedepth]) and (
-                histoemadata.index[-1] >= df.index[-1 - overridedepth]):
-            usehistoforinit = True
-
-    df.sort_index(inplace=True)
-    if usehistoforinit:
-        # cas où on fournit un historique des ema
-        histoemadata.sort_index(inplace=True)
-
-    cols = get_columns(df, cols)
+    # cols = get_columns(df, cols)
     # cols = df.columns
     # if not(col in self.columns) : return new_df
     # import pdb; pdb.set_trace()
     # extraction des données à moyenner dans un DataFrame
-    datacols = pd.DataFrame(data=df[cols])
-    if inplace:
-        new_df = df
-    else:
-        new_df = df.copy()
-        new_df = new_df.take_columns(cols)
+    # datacols = pd.DataFrame(data=df[cols])
+    # if inplace:
+    #     new_df = df
+    # else:
+    #     new_df = df.copy()
+    #     new_df = new_df.take_columns(cols)
     # calculer la période synthétique correspondant au coeff s'il est fourni
     if type(emadecay) in [int, float]:
         if emadecay > 0:
             span = 2.0 / emadecay - 1
 
-    if usehistoforinit:
+    if histoemadata is not None:
         # historique d'ema fourni
-        dhistolast = histoemadata.index[-1]
-        dnewlast = df.index[-1]
-        # si plus d'historique que de données nouvelles, rien à faire
-        if dhistolast >= dnewlast:
-            return histoemadata
-        if type(dhistolast) == int:
-            dfirstnewema = dhistolast + 1
+        dfema = histoemadata.copy()
+        dfema = dfema.dropna()
+        print('dfema {}'.format(dfema))
+        print('df_hist {}'.format(dfema))
+        if df.index[-1] > dfema.index[-1]:
+            # dend = df.index[-1]
+            # dend0 = histoemadata.index[-1]
+            # dstart = histoemadata.index[-2]
+            # colx = histoemadata.columns.values
+            # df.columns = colx
+            # # datacol = take_interval(df, dstart=dstart, dend=dend, inplace=True)
+            # datacols = take_interval(df, dstart=dstart, dend=dend, inplace=True)
+            # datacols.loc[dstart:dend0] = histoemadata.loc[dstart:dend0]
+            # ind0 = datacols.ix[dstart: dend]
+            # ind = datacol.index
+            # data_array = [0 for i in range(len(ind))]
+            # data_array = histoemadata.iloc[-1:-10].values
+            # data_array[1] = histoemadata.iloc[-2].values[0]
+            # datacols = pd.DataFrame(index=ind, data=datacol)
+
+            # extraction du segment de nouvelles données
+            # datacols = datacols.ix[dstart: dend]
+            # datacols = datacols.fillna(0)
+
+            # print('datacols {}'.format(datacols))
+            # calcul de l'ema
+            # [dend0:]
+            # newemadata = pd.ewma(datacols, span=span)
+            #
+            # # newemadata = newemadata.ix[dend0:dend]
+            # print('newemadata {}'.format(newemadata))
+            #
+            # # recollement des nouvelles données
+            # new_df = newemadata.append(histoemadata)
+            # new_df = new_df[~new_df.index.duplicated(take_last=False)]
+            # new_df.sort_index(ascending=True, inplace=True)
+            # print('new_df {}'.format(new_df.tail(10)))
+            #
+            # # print(new_df)
+            print('******************************************')
+            idx = dfema.index[-1]
+            col = dfema.columns[0]
+            colx = df.columns[0]
+            c = (dfema.get_value(col, -1) - df.get_value(colx, idx)) / (dfema.get_value(col, -2) - df.get_value(colx, idx))
+            new_df = histoemadata.ix[idx:]
+            dfprim = df.ix[idx:]
+            for i in range(1, len(df)):
+                new_df.iloc[i] = c * dfema.get_value(col, i - 1) + (1 - c) * dfprim.get_value(colx, i - 1)
+
+            print('******************************************')
         else:
-            dfirstnewema = dhistolast + timedelta(days=1)
-        # extraction du segment de nouvelles données
-        datacols = datacols.ix[dfirstnewema: dnewlast]
-        # calcul de l'ema
-        newemadata = pd.ewma(datacols, span=span, wres=wres, normalize=normalize)
-        # recollement des nouvelles données
-        emadata = histoemadata
-        emadata.patch_append(newemadata, check_overlap=True)
+            new_df = histoemadata
     else:
         # recalcul de la totalité des données de l'ema
-        emadata = pd.ewma(datacols, span=span, adjust=True)
+        emadata = pd.ewma(df, span=span, adjust=True)
         new_df = emadata
     # calcul du résidu
+    # print(df[cols])
+    # print(emadata)
     if wres:
         rescols = df[cols] - emadata
         # calcul du ZScore

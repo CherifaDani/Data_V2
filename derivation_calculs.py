@@ -14,7 +14,7 @@ def get_var_name(x):
     return x.get_param('var_name')
 
 
-def apply_operation(var_list, freq, operation, parameters):
+def apply_operation(var_list, freq, operation, parameters, histodata):
     """
     Function used to derive dataframes
  
@@ -55,6 +55,16 @@ def apply_operation(var_list, freq, operation, parameters):
     # print('colout')
     # print(type(colout))
     # print(colout)
+    # if operation == 'timeshift':
+    #     shift = parameters.get('shift', 0)
+    #     if shift != 0 or freq is not None:
+    #         output_df = dfunc.apply_timeshift(idx0, shift=shift, freq=freq, histodata=histodata)
+    #         # if idx1 is not None:
+    #         #     idx1 = dfunc.apply_timeshift(idx1, shift=shift, freq=freq, histodata=df_derived)
+
+    # if operation == 'timeshift':
+    #     shift = parameters.get('shift', 0)
+    #     output_df = idx0
     if 'shift' in parameters:
 
         shift = parameters['shift']
@@ -65,6 +75,7 @@ def apply_operation(var_list, freq, operation, parameters):
     if operation == 'timeshift':
         shift = parameters.get('shift', 0)
         output_df = idx0
+
 
     elif operation == 'fillmissing':
         idxmain = parameters.get('main', 0)
@@ -105,7 +116,7 @@ def apply_operation(var_list, freq, operation, parameters):
         wres = parameters.get('wres', True)
         # wz = parameters.get('wZ', True)
         output_df = dfunc.apply_ewma(df=idx0, emadecay=emadecay, wres=wres, inplace=True,
-                                     normalize=True, stdev_min=1e-5, histoemadata=None)
+                                     normalize=True, stdev_min=1e-5, histoemadata=histodata)
 
     elif operation == 'futuresroll':
         rolldict = {'freq': parameters.get('freq', 'B'),
@@ -206,23 +217,57 @@ def apply_operation(var_list, freq, operation, parameters):
     if 'mult' in parameters:
         mult = parameters['mult']
         if mult != 1:
-            return output_df * mult
+            if histodata is not None:
+                if output_df.index[-1] > histodata.index[-1]:
+                    dend = output_df.index[-1]
+                    dstart = histodata.index[-1]
+                    df_calc = dfunc.take_interval(output_df, dstart=dstart, dend=dend, inplace=True)
+                    df_calc = df_calc * mult
+                    output_df = histodata.append(df_calc)
+                    output_df = output_df[~output_df.index.duplicated(take_last=False)]
+
+                else:
+                    output_df = histodata
+            else:
+                output_df = output_df * mult
 
     if 'lag' in parameters:
         lag = parameters['lag']
         if lag != 0:
             return dfunc.apply_lag(output_df, lag=lag, freq=freq)
     if 'add' in parameters:
-        add = parameters['add']
-        if add != 0:
-            return output_df + parameters['add']
+        add_val = parameters['add']
+        if add_val != 0:
+            if histodata is not None:
+                if output_df.index[-1] > histodata.index[-1]:
+                    dend = output_df.index[-1]
+                    dstart = histodata.index[-1]
+                    df_calc = dfunc.take_interval(output_df, dstart=dstart, dend=dend, inplace=True)
+                    df_calc = df_calc + add_val
+                    output_df = histodata.append(df_calc)
+                    output_df = output_df[~output_df.index.duplicated(take_last=False)]
 
+                else:
+                    output_df = histodata
+            else:
+                output_df = output_df + add_val
     if 'power' in parameters:
         power = parameters['power']
         if power != 1:
-            # pdb.set_trace()
-            df = output_df ** power
-            output_df = pd.DataFrame(index=df.index, data=df.values, columns=df.columns)
+            if histodata is not None:
+                if output_df.index[-1] > histodata.index[-1]:
+                    dend = output_df.index[-1]
+                    dstart = histodata.index[-1]
+                    df_calc = dfunc.take_interval(output_df, dstart=dstart, dend=dend, inplace=True)
+                    df_calc = df_calc ** power
+                    output_df = histodata.append(df_calc)
+                    output_df = output_df[~output_df.index.duplicated(take_last=False)]
+
+                else:
+                    output_df = histodata
+            else:
+                output_df = output_df ** power
+
     if 'levels' in parameters and operation != 'cat':
         if levels > 0:
             quantilize = parameters['quantilize']
@@ -241,4 +286,5 @@ def apply_operation(var_list, freq, operation, parameters):
             output_df = dfunc.apply_filter(idx0, period=period, min_value=min_value,
                                            max_value=max_value, diff_order=diff_order,
                                            inpct=inpct, inplace=True, cols=None)
+
     return output_df
