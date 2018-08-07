@@ -76,7 +76,6 @@ def apply_operation(var_list, freq, operation, parameters, histodata):
         shift = parameters.get('shift', 0)
         output_df = idx0
 
-
     elif operation == 'fillmissing':
         idxmain = parameters.get('main', 0)
         idxsubst = parameters.get('subst', 1)
@@ -87,7 +86,10 @@ def apply_operation(var_list, freq, operation, parameters, histodata):
         coeff2 = parameters.get('coeff2', 0)
         islinear = parameters.get('lin', True)
         transfo = parameters.get('transfo', None)
-        output_df = dfunc.apply_combi(df1=idx0, df2=idx1, coeff1=coeff1, coeff2=coeff2,
+        idx1 = parameters.get('idx1', 0)
+        idx2 = parameters.get('idx2', 1)
+
+        output_df = dfunc.apply_combi(df1=dfs[0], df2=dfs[1], idx1=idx1, idx2=idx2, coeff1=coeff1, coeff2=coeff2,
                                       islinear=islinear, transfo=transfo)
 
     elif operation == 'pctdelta':
