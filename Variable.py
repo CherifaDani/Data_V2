@@ -235,6 +235,7 @@ class Variable(object):
         parents = var_dict['parents']
         derived_params = var_dict['parameters']
         operation = var_dict['operation']
+        fill_rule = var_dict['fill_rule']
 
         # initializing the attributes of the var
 
@@ -251,6 +252,7 @@ class Variable(object):
         self.set_params(parents=parents)
         self.set_params(derived_params=derived_params)
         self.set_params(operation=operation)
+        self.set_params(fill_rule=fill_rule)
         # self.set_params(ope_dict=ope_dict)
         logger.debug('Dictionary for {} is {} in {}'.format(
                      self.get_param('var_name'), var_dict, __name__))

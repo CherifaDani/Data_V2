@@ -8,7 +8,7 @@ import data_utils
 import numpy as np
 import time
 
-script_path = '1V.xlsx'
+script_path = '1v.xlsx'
 state_path = 'variable_state.csv'
 """
 Date: 30-07-2018
@@ -35,12 +35,28 @@ var_name = 'GOV_USA_1Y_DACE_1_20_100'  # autocorr
 var_name = 'FUT_BUND_FWDRET20'  # pctdelta 120 diff [dates ajoutées]
 var_name = 'FUT_BUND_FWDRET1'  # pctdelta 72 differences [ added dates]
 var_name = 'FUT_BUND_FWDRET5'  # pctdelta [97 diff]
+# var_name = 'FUT_BUND_TREND6M'  # ewma ok
+var_name = 'STR_USD_6M_Z5D'  # ewma ok
+var_name = 'FUT_BUND_CR1'  # combi ok
+var_name = 'Corr_GOV_USA_10Y-GOV_GER_10Y'
+var_name = 'GOV_GER_2Y_DACE_1_20_100' ok
+var_name = 'Corr_GOV_GER_10Y-GOV_JPN_10Y'  #  ok
+var_name = 'Spread_SWAP_USD_2Y-GOV_USA_2Y'  # combi
+var_name = 'SP500_EBIT1Y_YIELD'  # combi
+var_name = 'CORP_IG_USA_5Y'  # combi
+var_name = 'Corr_BOVES_LAST-Gold'  # corr
+var_name = 'Corr_GOV_USA_10Y-GOV_GER_10Y'  # corr
+# var_name = 'GOV_GER_2Y_DACE_1_20_100'
 
-
-
+# var_name = 'FUT_BUND_RET1C1' ok
+# var_name = 'Corr_BOVES_LAST-Gold'  # corr
+# var_name = 'Corr_TOPIX_LAST-HSCE_LAST'
+# var_name = 'Corr_HSCE_LAST-NSDQ_LAST' ok
+# var_name = 'Corr_NIKKEI225_LAST-TOPIX_LAST' ok
+# var_name = 'FUT_TNOTE_RET1C1' # pct_delta ok
 
 # BaD
-# var_name = 'Corr_GOV_GER_10Y-GOV_JPN_10Y'  # not ok
+
 # var_name = 'Corr_WTI-Gold'  # corr {'period':1 , 'window': 100, 'inpct': True, 'exponential':True, 'col1':0, 'col2': 1}
 # var_name = 'Spread_GOV_USA_30Y-GOV_JPN_30Y'  # combi not ok
 
@@ -65,21 +81,14 @@ var_name = 'FRA_USD_6X12_DACE_1_20_100'  # var not found
 var_name = 'CDS_UK_1Y_DACE_1_20_100'  # autocorr  path error
 # var_name = 'FUT_BUND_RCR20' files not found
 var_name = 'FUT_JNI_RET1ROLL'  # futures_roll var not found
+var_name = 'SP500_DPS_YIELD'  # path error
+var_name = 'SP500_CR20'  # var not found
+var_name = 'SP500_DPS_YIELD'  # combi
+var_name = 'USDEUR_CR20'  # combi
 
 """
-# var_name = 'Spread_SWAP_USD_2Y-GOV_USA_2Y'  # combi not ok
-# var_name = 'CORP_IG_USA_5Y'  # combi
-# var_name = 'USDEUR_CR20'  # combi
-# var_name = 'SP500_EBIT1Y_YIELD'  # combi
-# var_name = 'SP500_DPS_YIELD'  # combi
-# var_name = 'SP500_CR20'  # combi
-# var_name = 'Corr_GOV_USA_10Y-GOV_GER_10Y'  # corr
-# var_name = 'Corr_BOVES_LAST-Gold'  # corr
-# var_name = 'CORP_IG_USA_5Y' combi
-# var_name = 'FUT_BUND_CR1'  # combi
 
-# var_name = 'STR_USD_1D'
-var_name = 'FUT_BUND_TREND6M'  # ewma
+var_name = ''
 start = time.time()
 b = Variable(script_path=script_path,
              state_path=state_path,
@@ -89,16 +98,19 @@ b = Variable(script_path=script_path,
 # print(time.time() - start)
 b.write_dict()
 print b.get_params()
+
 var_name2 = b.get_param('parents')
+print('parents {}'.format(var_name2))
 operation = b.get_param('operation')
 parameters = b.get_param('derived_params')
 # parameters = {'power': 20}
+# parameters =  {'emadecay': 2.0 / (1 + 120), 'wres': True, 'wZ': False, 'col_out': 1}
 df_derived = b.read_var()
 
 c = Variable(script_path=script_path,
              state_path=state_path,
              var_name=var_name2[0])
-print(var_name2)
+# print(var_name2)
 c.write_dict()
 # print(parameters)
 
@@ -117,7 +129,7 @@ else:
     # print(df_derived.shape)
 print '################################DF##########################################'
 print('df calculé {}'.format(df))
-# # df.to_csv('x_test.csv')
+df.to_csv('x_test.csv')
 dfx = b.read_var(b.get_param('path'))
 print('df déjà présent {}'.format(dfx))
 print compare_dfs.compare_two_dfs(dfx, df)

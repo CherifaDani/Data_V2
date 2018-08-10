@@ -448,7 +448,8 @@ def apply_combi(df1, df2, idx1=0, coeff1=1,
 
     '''Renvoie la combinaison linéaire ou exponentielle de deux colonnes. '''
     df = pd.concat([df1, df2], axis=1)
-    df = df.dropna()
+    # df = df.dropna()
+    df = df.fillna(method='ffill')
     cols1 = get_columns(df, idx1)
     if len(cols1) > 0:
         col1 = cols1[0]
@@ -671,7 +672,8 @@ def apply_corr(df1, df2,
                exponential=True,
                inpct=True,
                cols=None,
-               lag=0):
+               lag=0,
+               fill_rule='ffill'):
     """
    This function computes the correlation between two DFs
 
@@ -711,16 +713,33 @@ def apply_corr(df1, df2,
     """
 
     new_df = pd.DataFrame()
+    print(df1, df2)
     if df1.index[0] < df2.index[0]:
         idx = df1.index
         df2 = df2.reindex(index=idx, method='ffill')
-    else:
+        df = pd.concat([df1, df2], axis=1)
+        df.columns = ['idx0', 'idx1']
+
+        df['idx1'] = df['idx1'].fillna(method=fill_rule)
+        # df = df.dropna(how='any')
+
+    elif df1.index[0] > df2.index[0]:
         idx = df2.index
         df1 = df1.reindex(index=idx, method='ffill')
-    df = pd.concat([df1, df2], axis=1)
-    if df1.equals(df2):
+        df = pd.concat([df1, df2], axis=1)
         df.columns = ['idx0', 'idx1']
-    # df = df.fillna(method='ffill')
+
+        df['idx1'] = df['idx1'].fillna(method=fill_rule)
+        # df = df.dropna(how='any')
+
+    else:
+        df = pd.concat([df1, df2], axis=1)
+        df.columns = ['idx0', 'idx1']
+
+        df['idx1'] = df['idx1'].fillna(method=fill_rule)
+        df = df.dropna(how='any')
+
+
     cols = get_columns(df, cols)
     if len(cols) == 1:
         col1 = cols[0]
@@ -741,7 +760,9 @@ def apply_corr(df1, df2,
             data2 = df[col2].diff(period).shift(periods=lag * period)[startval:]
 
     if exponential:
+        # corrdata = pd.ewmcorr(data1, data2, span=span)
         corrdata = pd.ewmcorr(data1[startval:], data2[startval:], span=span)
+
     else:
         corrdata = pd.rolling_corr(data1, data2, window=span)
 
@@ -1348,7 +1369,7 @@ def apply_roll_shift(dates, roll_dict):
     return rolldates
 
 
-def fill_missing_values(idxmain, idxsubst, dfsubst=None):
+def fill_missing_values(df0, df1, idxmain, idxsubst, dfsubst=None):
     """
     This function fills the missing values ​​of the idxmain column with the idxsubst column
     Parameters
@@ -1367,13 +1388,13 @@ def fill_missing_values(idxmain, idxsubst, dfsubst=None):
     new_df : The output dataframe
 
        """
-    df = pd.concat([idxmain, idxsubst], axis=1)
+    df = pd.concat([df0, df1], axis=1)
     if dfsubst is None:
         df2 = df
     else:
         df2 = dfsubst
     try:
-        maincol = get_columns(idxmain)[0]
+        maincol = get_columns(df, idxmain)[0]
         substcol = get_columns(df2)[0]
         if dfsubst is not None:
             df[substcol] = df2[substcol]
@@ -1763,4 +1784,19 @@ def apply_filter(df, period=1, min_value=np.NINF, max_value=np.inf, diff_order=1
                           data=delta_data.values,
                           columns=cols)
 
+    return new_df
+
+
+def exclude_interval(df, dstart, dend, fmt='%d/%m/%Y'):
+    if len(df.index) == 0:
+        return df
+    if type(dstart) == str:
+        dstart = datetime.strptime(dstart, fmt)
+    if type(dend) == str:
+        dend = datetime.strptime(dend, fmt)
+    try:
+        datestokeep = df.index.map(lambda (x): (x < dstart) or (x > dend))
+        new_df = pd.DataFrame(df[datestokeep])
+    except Exception as e:
+        new_df = df
     return new_df

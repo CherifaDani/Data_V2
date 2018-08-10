@@ -216,7 +216,7 @@ def discretize(xcol, nb_bucket, bins=None):
         return xcol
 
 
-def load_var(path, var_name, times_series=False, round=False):
+def load_var(path, var_name=None, times_series=False, round=False):
     """
     Function used to load a variable from a path
 
@@ -831,62 +831,63 @@ def fill_dict_from_df(dfs, variable_name):
         sel_row = dfs.loc[dfs['SQL_Name'] == variable_name]
         logger.info('Retrieving informations for the variable: {}'.
                     format(variable_name))
+        sel_row.columns = [x.upper() for x in dfs.columns.values]
 
         # Category
-        cat_name = sel_row['Rubrique'].values
+        cat_name = sel_row['RUBRIQUE'].values
         cat_name = check_cell(cat_name)
         test_cell(cat_name, 'str', 'Rubrique')
 
         # Operation
 
-        operation = sel_row['Operation'].values
+        operation = sel_row['OPERATION'].values
         operation = check_cell(operation)
         test_cell(operation, 'str', 'Operation')
 
         # SQL Name
-        sql_name = sel_row['SQL_Name'].values
+        sql_name = sel_row['SQL_NAME'].values
         sql_name = check_cell(sql_name)
         test_cell(sql_name, 'str', 'sql_name')
 
         # Frequency
-        freq = sel_row['Frequence'].values
+        freq = sel_row['FREQUENCE'].values
         freq = check_cell(freq)
         test_cell(freq, 'str', 'Frequence')
         if freq == 'D':
             freq = 'B'.encode('utf-8')
 
         # Country
-        country = sel_row['benchmark_country'].values
+        country = sel_row['BENCHMARK_COUNTRY'].values
         country = check_cell(country)
         test_cell(country, 'str', msg='benchmark_country')
 
         # Minimum Value
-        min_val = sel_row['Minimum Value'].values
+        min_val = sel_row['MINIMUM VALUE'].values
         min_val = check_cell(min_val)
         test_cell(min_val, 'float', 'Minimum Value')
 
         # Maximum Value
-        max_val = sel_row['Maximum value'].values
+        max_val = sel_row['MAXIMUM VALUE'].values
         max_val = check_cell(max_val)
         test_cell(max_val, 'float', 'Maximum Value')
 
         # Maximum Absolute Change
-        mac_val = sel_row['maximum absolute change'].values
+        mac_val = sel_row['MAXIMUM ABSOLUTE CHANGE'].values
         mac_val = check_cell(mac_val)
         test_cell(mac_val, 'float', 'maximum absolute change')
 
         # Maximum Consecutive Missing Values
-        mcmv_val = sel_row['Max consecutive missing values'].values
+        mcmv_val = sel_row['MAX CONSECUTIVE MISSING VALUES'].values
         mcmv_val = check_cell(mcmv_val)
         test_cell(mcmv_val, 'int', 'Max consecutive missing values')
 
         # Maximum Consecutive Constant Values
-        mccv_val = sel_row['Max consecutive constant values'].values
+        mccv_val = sel_row['MAX CONSECUTIVE CONSTANT VALUES'].values
         mccv_val = check_cell(mccv_val)
         test_cell(mccv_val, 'int', 'Max consecutive constant values')
 
         # Path
-        path = sel_row['Path'].values
+        path = sel_row['PATH'].values
         path = check_cell(path)
         test_cell(path, 'str', 'Path')
         extension = os.path.splitext(path)[1]
@@ -894,11 +895,11 @@ def fill_dict_from_df(dfs, variable_name):
             path = '{}{}'.format(path, '.csv')
 
         # Parents
-        parents = sel_row['Parent List'].values
+        parents = sel_row['PARENT LIST'].values
         parents = filter(lambda p: p == p, parents)
 
         if len(parents) > 0:
-            parents = sel_row['Parent List'].values[0]
+            parents = sel_row['PARENT LIST'].values[0]
             parents = parents.replace('[', '[\'')
             parents = parents.replace(']', '\']')
             parents = parents.replace(', ', '\',\'')
@@ -907,11 +908,11 @@ def fill_dict_from_df(dfs, variable_name):
             logger.debug('No parents')
 
         # Parameters
-        parameters = sel_row['Parameters'].values
+        parameters = sel_row['PARAMETERS'].values
         parameters = filter(lambda p: p == p, parameters)
 
         if len(parameters) > 0:
-            parameters = sel_row['Parameters'].values[0]
+            parameters = sel_row['PARAMETERS'].values[0]
             logger.info('parameters of the variable {} are: {}'.format(variable_name, parameters))
             try:
                 parameters = ast.literal_eval(parameters)
@@ -928,6 +929,12 @@ def fill_dict_from_df(dfs, variable_name):
         else:
             parameters = {}
             logger.debug('No Parameters!')
+        # Fill rule
+        fill_rule = sel_row['FILL RULE'].values
+        fill_rule = check_cell(fill_rule)
+        test_cell(fill_rule, 'str', 'fill rule')
+        if fill_rule not in ['ffill', 'bfill', 'backfill', 'pad']:
+            fill_rule = 'ffill'
 
         dict_df = {'cat_name': cat_name,
                    'sql_name': sql_name,
@@ -941,7 +948,8 @@ def fill_dict_from_df(dfs, variable_name):
                    'parents': parents,
                    'parameters': parameters,
                    'path': path,
-                   'operation': operation
+                   'operation': operation,
+                   'fill_rule': fill_rule
                    }
         return dict_df
     else:
