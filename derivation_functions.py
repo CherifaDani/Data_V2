@@ -407,60 +407,55 @@ def index_df(df1, df2):
         return newds2
 
 
-def apply_combi(df1, df2, idx1=0, coeff1=1,
-                idx2=1, coeff2=0, constant=0,
-                islinear=True, transfo=None):
+def calcul_combi(df, idx1, idx2, coeff1, coeff2, constant, islinear, transfo):
     """
-   This function returns  the linear or exponential combination of two columns
+          This function returns  the linear or exponential combination of two columns
 
-   Parameters
-   ----------
-   df1 : {Dataframe type}
-         The input dataframe
+          Parameters
+          ----------
+          df1 : {Dataframe type}
+                The input dataframe
 
-   df2 : {Dataframe type}
-         The input dataframe
+          df2 : {Dataframe type}
+                The input dataframe
 
-   coeff1 : {Float type}
-             A multiplicative coefficient if islinear is True,
-             else exponential, applied to the first DF
-             Default: 1
+          coeff1 : {Float type}
+                    A multiplicative coefficient if islinear is True,
+                    else exponential, applied to the first DF
+                    Default: 1
 
-   coeff2 : {Float type}
-             A multiplicative coefficient if islinear is True,
-             else exponential, applied to the second DF
-             Default: 0
+          coeff2 : {Float type}
+                    A multiplicative coefficient if islinear is True,
+                    else exponential, applied to the second DF
+                    Default: 0
 
-   constant : {Float type}
-              This value is added if islinear is true, else multiplied.
-               Default: 0
+          constant : {Float type}
+                     This value is added if islinear is true, else multiplied.
+                      Default: 0
 
-   islinear : {Boolean type}
-              Designates the nature of the operation
-              True: addition
-              False: multiplication
-              default: None
+          islinear : {Boolean type}
+                     Designates the nature of the operation
+                     True: addition
+                     False: multiplication
+                     default: None
 
-   Return
-   ------
-   new_df : The output dataframe
-   """
+          Return
+          ------
+          new_df : The output dataframe
+          """
 
     '''Renvoie la combinaison linéaire ou exponentielle de deux colonnes. '''
-    df = pd.concat([df1, df2], axis=1)
-    # df = df.dropna()
-    df = df.fillna(method='ffill')
     cols1 = get_columns(df, idx1)
     if len(cols1) > 0:
         col1 = cols1[0]
         datacol1 = df[col1]
     else:
         datacol1 = None
-
     cols2 = get_columns(df, idx2)
     if len(cols2) > 0:
         col2 = cols2[0]
         datacol2 = df[col2]
+
     else:
         datacol2 = None
 
@@ -477,7 +472,6 @@ def apply_combi(df1, df2, idx1=0, coeff1=1,
         c2one = True
     if coeff2 < 0:
         c2neg = True
-        # pdb.set_trace()
     if islinear:
 
         combiarray = np.zeros(len(df.index)) + constant
@@ -505,12 +499,91 @@ def apply_combi(df1, df2, idx1=0, coeff1=1,
     #  en cas de copie d'objet: on ne renvoie que la colonne résultat
     strc1 = strsgn1 = strc2 = strsgn2 = ''
 
-    newdataset = pd.DataFrame(index=df.index,
-                          data=combiarray,
-                          columns=['VALUE'])
-        # newdataset =newdataset.ix [dstart, dend]
-#         newdataset.name = colname
-    return newdataset
+    data = pd.DataFrame(index=df.index,
+                        data=combiarray,
+                        columns=['VALUE'])
+    return data
+
+
+def apply_combi(df1, df2, idx1=0, coeff1=1,
+                idx2=1, coeff2=0, constant=0,
+                islinear=True, transfo=None, histodata=None):
+    """
+      This function returns  the linear or exponential combination of two columns
+
+      Parameters
+      ----------
+      df1 : {Dataframe type}
+            The input dataframe
+
+      df2 : {Dataframe type}
+            The input dataframe
+
+      coeff1 : {Float type}
+                A multiplicative coefficient if islinear is True,
+                else exponential, applied to the first DF
+                Default: 1
+
+      coeff2 : {Float type}
+                A multiplicative coefficient if islinear is True,
+                else exponential, applied to the second DF
+                Default: 0
+
+      constant : {Float type}
+                 This value is added if islinear is true, else multiplied.
+                  Default: 0
+
+      islinear : {Boolean type}
+                 Designates the nature of the operation
+                 True: addition
+                 False: multiplication
+                 default: None
+
+      Return
+      ------
+      new_df : The output dataframe
+      """
+
+    '''Renvoie la combinaison linéaire ou exponentielle de deux colonnes. '''
+
+    # df = pd.concat([df1, df2], axis=1)
+
+    # if df1.index[0] < df2.index[0]:
+    #     idx = df1.index
+    #     df2 = df2.reindex(index=idx, method='ffill')
+    #
+    # elif df1.index[0] > df2.index[0]:
+    #     idx = df2.index
+    #     df1 = df1.reindex(index=idx, method='ffill')
+    #
+    # else:
+    #     pass
+    df = pd.concat([df1, df2], axis=1)
+
+    df = df.fillna(method='ffill')
+    print(df1.index[0], df2.index[0])
+    if histodata is not None:
+        dfcombi = histodata.copy()
+        dfcombi = dfcombi.dropna()
+        idx = dfcombi.index[-1]
+        if df.index[-1] > dfcombi.index[-1]:
+            print('*****************************************')
+            dfc = df.loc[idx:]
+            dfco = histodata.loc[idx:]
+            df_calc = pd.concat([dfc, dfco], axis=1)
+            data = calcul_combi(df_calc, idx1=idx1, idx2=idx2, coeff1=coeff1,
+                                coeff2=coeff2, constant=constant, islinear=islinear, transfo=transfo)
+            print('-*-*-*-*-data {} -*-*-*-'.format(data))
+            new_df = histodata.append(data)
+            new_df = new_df[~new_df.index.duplicated(take_last=False)]
+        else:
+            new_df = histodata
+            print('******--------------------**************')
+
+    else:
+        new_df = calcul_combi(df, idx1=idx1, idx2=idx2, coeff1=coeff1,
+                              coeff2=coeff2, constant=constant, islinear=islinear, transfo=transfo)
+    return new_df
 
 
 def take_columns(df, cols=None, forceuppercase=True):
@@ -738,7 +811,6 @@ def apply_corr(df1, df2,
 
         df['idx1'] = df['idx1'].fillna(method=fill_rule)
         df = df.dropna(how='any')
-
 
     cols = get_columns(df, cols)
     if len(cols) == 1:

@@ -97,7 +97,7 @@ def apply_operation(var_list, freq, operation, parameters, histodata):
         idx2 = parameters.get('col2', 1)
 
         output_df = dfunc.apply_combi(df1=dfs[0], df2=dfs[1], idx1=idx1, idx2=idx2, coeff1=coeff1, coeff2=coeff2,
-                                      islinear=islinear, transfo=transfo)
+                                      islinear=islinear, transfo=transfo, histodata=histodata)
 
     elif operation == 'pctdelta':
         period = parameters.get('period', 1)

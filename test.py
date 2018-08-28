@@ -32,8 +32,7 @@ var_name = 'FUT_BUND_DRIFT'  # combi 2 diff [lin:True}]
 var_name = 'Gold_DACE_1_20_100'  # ok
 var_name = 'SP500_RET1'  # rolling_return ok
 var_name = 'GOV_USA_1Y_DACE_1_20_100'  # autocorr
-var_name = 'FUT_BUND_FWDRET20'  # pctdelta 120 diff [dates ajoutées]
-var_name = 'FUT_BUND_FWDRET1'  # pctdelta 72 differences [ added dates]
+
 var_name = 'FUT_BUND_FWDRET5'  # pctdelta [97 diff]
 # var_name = 'FUT_BUND_TREND6M'  # ewma ok
 var_name = 'STR_USD_6M_Z5D'  # ewma ok
@@ -54,17 +53,22 @@ var_name = 'Corr_GOV_USA_10Y-GOV_GER_10Y'  # corr
 # var_name = 'Corr_HSCE_LAST-NSDQ_LAST' ok
 # var_name = 'Corr_NIKKEI225_LAST-TOPIX_LAST' ok
 # var_name = 'FUT_TNOTE_RET1C1' # pct_delta ok
+# var_name = 'Spread_GOV_USA_30Y-GOV_JPN_30Y'  # combi  ok
 
 # BaD
 
 # var_name = 'Corr_WTI-Gold'  # corr {'period':1 , 'window': 100, 'inpct': True, 'exponential':True, 'col1':0, 'col2': 1}
-# var_name = 'Spread_GOV_USA_30Y-GOV_JPN_30Y'  # combi not ok
 
 
 
 # calcul incrémental
 var_name = 'CORP_IG_USA_5Y_Z45D'  # ewma, incr done!
+var_name = 'FUT_BUND_DRIFT'  # combi incr ok!
 
+# var_name = 'Spread_GOV_USA_2Y-GOV_USA_1Y'
+# var_name = 'Spread_GOV_USA_30Y-GOV_GER_30Y'
+# var_name = 'CORP_HY_US_5Y'
+var_name = 'Spread_GOV_USA_30Y-GOV_JPN_30Y'  # combi not ok
 
 
 
@@ -82,13 +86,18 @@ var_name = 'CDS_UK_1Y_DACE_1_20_100'  # autocorr  path error
 # var_name = 'FUT_BUND_RCR20' files not found
 var_name = 'FUT_JNI_RET1ROLL'  # futures_roll var not found
 var_name = 'SP500_DPS_YIELD'  # path error
-var_name = 'SP500_CR20'  # var not found
 var_name = 'SP500_DPS_YIELD'  # combi
 var_name = 'USDEUR_CR20'  # combi
+# var_name = 'FUT_GBPUSD_DRIFT'  # no path
+var_name = 'FUT_JGB_CR20'
+var_name = 'FUT_SP500_C1_RET1D'
+# var_name = 'FUT_CL_C1_RET1D'
+var_name = 'FUT_XB_C1_RET1D'
+# var_name = 'FUT_NKY_C1_RET1D'
 
 """
-
-var_name = ''
+# var_name = 'Spread_GOV_USA_2Y-GOV_USA_1Y'
+var_name = 'Corr_WTI-Gold'
 start = time.time()
 b = Variable(script_path=script_path,
              state_path=state_path,
@@ -133,7 +142,7 @@ df.to_csv('x_test.csv')
 dfx = b.read_var(b.get_param('path'))
 print('df déjà présent {}'.format(dfx))
 print compare_dfs.compare_two_dfs(dfx, df)
-#
+
 # df1 = data_utils.load_var('compare/1.csv', 'dd')
 # df2 = data_utils.load_var('compare/2.csv', 'd')
 # print compare_dfs.compare_two_dfs(df1, df2)
