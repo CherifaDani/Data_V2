@@ -97,11 +97,16 @@ var_name = 'FUT_XB_C1_RET1D'
 
 """
 # var_name = 'Spread_GOV_USA_2Y-GOV_USA_1Y'
-var_name = 'Corr_WTI-Gold'
+# var_name = 'Corr_WTI-Gold'
+
+var_name = 'FUT_BUND_TREND6M'  # ewma # var_name = 'FUT_BUND_TREND6M'  # ewma ok
+
+
 start = time.time()
 b = Variable(script_path=script_path,
              state_path=state_path,
              var_name=var_name)
+
 # b.update()
 # print(pd.read_csv('2 Data/2 Calculs/18 04 Derived Lab/X/STR_USD_1D_Z250D.csv'))
 # print(time.time() - start)
@@ -110,6 +115,7 @@ print b.get_params()
 
 var_name2 = b.get_param('parents')
 print('parents {}'.format(var_name2))
+
 operation = b.get_param('operation')
 parameters = b.get_param('derived_params')
 # parameters = {'power': 20}
@@ -119,9 +125,11 @@ df_derived = b.read_var()
 c = Variable(script_path=script_path,
              state_path=state_path,
              var_name=var_name2[0])
+
 # print(var_name2)
 c.write_dict()
 # print(parameters)
+print('path_parents {}'.format(c.get_param('path')))
 
 
 if len(var_name2) > 1:

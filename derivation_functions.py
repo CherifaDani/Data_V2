@@ -13,7 +13,7 @@ try:
     import data_utils
 except ImportError:
     data_utils = None
-    raise ImportError("Don't find the package control_utils")
+    raise ImportError("Don't find the package data_utils")
 
 try:
     import var_logger
@@ -1519,14 +1519,14 @@ def auto_categorize(df, mod=10, level_date=None, date_end=None, min_r=0.02):
        """
     df_copy = df.copy()
     if date_end is not None:
-        if ds_copy.index.nlevels == 1:
-            ds_copy = ds_copy.loc[:date_end]
+        if df_copy.index.nlevels == 1:
+            df_copy = df_copy.loc[:date_end]
         # cas d'un multi index
-        elif ds_copy.index.nlevels == 2:
-            ds_copy = ds_copy.loc[ds_copy.index.get_level_values(level_date) <= date_end]
-            ds_copy = ds_copy.stack()
+        elif df_copy.index.nlevels == 2:
+            df_copy = df_copy.loc[df_copy.index.get_level_values(level_date) <= date_end]
+            df_copy = df_copy.stack()
 
-    df_q = [ds_copy.quantile(q=i / float(mod)) for i in range(0, int(mod) + 1, 1)]
+    df_q = [df_copy.quantile(q=i / float(mod)) for i in range(0, int(mod) + 1, 1)]
     df_q = pd.DataFrame(df_q)
     bins = list(np.unique(df_q.dropna(how='all')))
 

@@ -262,8 +262,8 @@ def load_from_file(path, round):
     ------
     df: {Dataframe type}
          a dataframe with sorted index
-    """
 
+    """
     sep = find_delim(path)
     extension = os.path.splitext(path)[1]
 
