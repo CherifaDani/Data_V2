@@ -96,61 +96,55 @@ var_name = 'FUT_XB_C1_RET1D'
 # var_name = 'FUT_NKY_C1_RET1D'
 
 """
-# var_name = 'Spread_GOV_USA_2Y-GOV_USA_1Y'
+var_name = 'Spread_GOV_USA_2Y-GOV_USA_1Y'
 # var_name = 'Corr_WTI-Gold'
 
-var_name = 'FUT_BUND_TREND6M'  # ewma # var_name = 'FUT_BUND_TREND6M'  # ewma ok
-
-
-start = time.time()
+# var_name = 'FUT_BUND_TREND6M'  # ewma # var_name = 'FUT_BUND_TREND6M'  # ewma ok
 b = Variable(script_path=script_path,
              state_path=state_path,
              var_name=var_name)
+print b.update()
 
-# b.update()
-# print(pd.read_csv('2 Data/2 Calculs/18 04 Derived Lab/X/STR_USD_1D_Z250D.csv'))
-# print(time.time() - start)
-b.write_dict()
-print b.get_params()
-
-var_name2 = b.get_param('parents')
-print('parents {}'.format(var_name2))
-
-operation = b.get_param('operation')
-parameters = b.get_param('derived_params')
-# parameters = {'power': 20}
-# parameters =  {'emadecay': 2.0 / (1 + 120), 'wres': True, 'wZ': False, 'col_out': 1}
-df_derived = b.read_var()
-
-c = Variable(script_path=script_path,
-             state_path=state_path,
-             var_name=var_name2[0])
-
-# print(var_name2)
-c.write_dict()
-# print(parameters)
-print('path_parents {}'.format(c.get_param('path')))
-
-
-if len(var_name2) > 1:
-    d = Variable(script_path=script_path,
-                 state_path=state_path,
-                 var_name=var_name2[1])
-    d.write_dict()
-    df = derivation_calculs.apply_operation(var_list=[c, d], freq='B', operation=operation,
-                                            parameters=parameters, histodata=df_derived)
-
-else:
-    df = derivation_calculs.apply_operation(var_list=[c], freq='B', operation=operation,
-                                            parameters=parameters, histodata=df_derived)
-    # print(df_derived.shape)
-print '################################DF##########################################'
-print('df calculé {}'.format(df))
-df.to_csv('x_test.csv')
-dfx = b.read_var(b.get_param('path'))
-print('df déjà présent {}'.format(dfx))
-print compare_dfs.compare_two_dfs(dfx, df)
-
-# df1 = data_utils.load_var('compare/1.csv', 'dd')
-# df2 = data_utils.load_var('compare/2.csv', 'd')
-# print compare_dfs.compare_two_dfs(df1, df2)
+# Dérivation partielle
+# start = time.time()
+# b = Variable(script_path=script_path,
+#              state_path=state_path,
+#              var_name=var_name)
+#
+# b.write_dict()
+# print b.get_params()
+#
+# var_name2 = b.get_param('parents')
+# print('parents {}'.format(var_name2))
+#
+# operation = b.get_param('operation')
+# parameters = b.get_param('derived_params')
+#
+# df_derived = b.read_var()
+#
+# c = Variable(script_path=script_path,
+#              state_path=state_path,
+#              var_name=var_name2[0])
+#
+# c.write_dict()
+# print('path_parents {}'.format(c.get_param('path')))
+#
+#
+# if len(var_name2) > 1:
+#     d = Variable(script_path=script_path,
+#                  state_path=state_path,
+#                  var_name=var_name2[1])
+#     d.write_dict()
+#     df = derivation_calculs.apply_operation(var_list=[c, d], freq='B', operation=operation,
+#                                             parameters=parameters)
+#
+# else:
+#     df = derivation_calculs.apply_operation(var_list=[c], freq='B', operation=operation,
+#                                             parameters=parameters)
+#
+# print '################################DF##########################################'
+# print('df calculé {}'.format(df))
+# df.to_csv('x_test.csv')
+# dfx = b.read_var(b.get_param('path'))
+# print('df déjà présent {}'.format(dfx))
+# print compare_dfs.compare_two_dfs(dfx, df)

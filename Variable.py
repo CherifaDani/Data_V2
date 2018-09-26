@@ -412,7 +412,7 @@ class Variable(object):
         var_name = self.get_param('var_name')
         script_path = self.get_param('script_path')
         state_path = self.get_param('state_path')
-        df_derived = self.read_var()
+        # df_derived = self.read_var()
         # Retrieving the parents of the variable
         parents = list(set(parents))
         len_parents = len(parents)
@@ -449,7 +449,7 @@ class Variable(object):
             # logger.warn('{} {} {}'.format(path, operation,
             #                              self.get_param('var_type')))
             map(lambda x: x.update(), var_list)
-            self.deriv_var(var_list=var_list, operation=operation, derived_params=derived_params, histodata=df_derived)
+            self.deriv_var(var_list=var_list, operation=operation, derived_params=derived_params)
             # last_update
             # map(lambda x: x.write_state_var(), var_list)
         return var_list
@@ -461,6 +461,7 @@ class Variable(object):
         var_dict = self.write_dict()
         var_name = self.get_param('var_name')
         # ope_dict = self.get_param('ope_dict')
+
 
         logger.debug('The dictionary of the variable {} is: {}'.
                      format(var_name, var_dict))
@@ -475,7 +476,7 @@ class Variable(object):
         else:
             self.update_deriv()
 
-    def deriv_var(self, var_list, operation, derived_params, histodata):
+    def deriv_var(self, var_list, operation, derived_params):
         map(lambda x: x.write_dict(), var_list)
         freq = self.get_param('freq')
         var_name = self.get_param('var_name')
@@ -483,8 +484,7 @@ class Variable(object):
         df_calc = derivation_calculs.apply_operation(var_list=var_list,
                                                      freq=freq,
                                                      operation=operation,
-                                                     derived_params=derived_params,
-                                                     histodata=histodata)
+                                                     parameters=derived_params)
         path = self.get_param('path')
 
         if df_calc is not None:

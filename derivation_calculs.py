@@ -15,7 +15,7 @@ def get_var_name(x):
     return x.get_param('var_name')
 
 
-def apply_operation(var_list, freq, operation, parameters, histodata):
+def apply_operation(var_list, freq, operation, parameters):
     """
     Function used to derive dataframes
  
@@ -97,7 +97,7 @@ def apply_operation(var_list, freq, operation, parameters, histodata):
         idx2 = parameters.get('col2', 1)
 
         output_df = dfunc.apply_combi(df1=dfs[0], df2=dfs[1], idx1=idx1, idx2=idx2, coeff1=coeff1, coeff2=coeff2,
-                                      islinear=islinear, transfo=transfo, histodata=histodata)
+                                      islinear=islinear, transfo=transfo)
 
     elif operation == 'pctdelta':
         period = parameters.get('period', 1)
@@ -125,7 +125,7 @@ def apply_operation(var_list, freq, operation, parameters, histodata):
         wres = parameters.get('wres', True)
         # wz = parameters.get('wZ', True)
         output_df = dfunc.apply_ewma(df=idx0, emadecay=emadecay, wres=wres, inplace=True,
-                                     normalize=True, stdev_min=1e-5, histoemadata=histodata)
+                                     normalize=True, stdev_min=1e-5)
 
     elif operation == 'futuresroll':
         rolldict = {'freq': parameters.get('freq', 'B'),
@@ -227,18 +227,18 @@ def apply_operation(var_list, freq, operation, parameters, histodata):
     if 'mult' in parameters:
         mult = parameters['mult']
         if mult != 1:
-            if histodata is not None:
-                if output_df.index[-1] > histodata.index[-1]:
-                    dend = output_df.index[-1]
-                    dstart = histodata.index[-1]
-                    df_calc = dfunc.take_interval(output_df, dstart=dstart, dend=dend, inplace=True)
-                    df_calc = df_calc * mult
-                    output_df = histodata.append(df_calc)
-                    output_df = output_df[~output_df.index.duplicated(take_last=False)]
-
-                else:
-                    output_df = histodata
-            else:
+            # if histodata is not None:
+            #     if output_df.index[-1] > histodata.index[-1]:
+            #         dend = output_df.index[-1]
+            #         dstart = histodata.index[-1]
+            #         df_calc = dfunc.take_interval(output_df, dstart=dstart, dend=dend, inplace=True)
+            #         df_calc = df_calc * mult
+            #         output_df = histodata.append(df_calc)
+            #         output_df = output_df[~output_df.index.duplicated(take_last=False)]
+            #
+            #     else:
+            #         output_df = histodata
+            # else:
                 output_df = output_df * mult
 
     if 'lag' in parameters:
@@ -248,34 +248,34 @@ def apply_operation(var_list, freq, operation, parameters, histodata):
     if 'add' in parameters:
         add_val = parameters['add']
         if add_val != 0:
-            if histodata is not None:
-                if output_df.index[-1] > histodata.index[-1]:
-                    dend = output_df.index[-1]
-                    dstart = histodata.index[-1]
-                    df_calc = dfunc.take_interval(output_df, dstart=dstart, dend=dend, inplace=True)
-                    df_calc = df_calc + add_val
-                    output_df = histodata.append(df_calc)
-                    output_df = output_df[~output_df.index.duplicated(take_last=False)]
-
-                else:
-                    output_df = histodata
-            else:
+            # if histodata is not None:
+            #     if output_df.index[-1] > histodata.index[-1]:
+            #         dend = output_df.index[-1]
+            #         dstart = histodata.index[-1]
+            #         df_calc = dfunc.take_interval(output_df, dstart=dstart, dend=dend, inplace=True)
+            #         df_calc = df_calc + add_val
+            #         output_df = histodata.append(df_calc)
+            #         output_df = output_df[~output_df.index.duplicated(take_last=False)]
+            #
+            #     else:
+            #         output_df = histodata
+            # else:
                 output_df = output_df + add_val
     if 'power' in parameters:
         power = parameters['power']
         if power != 1:
-            if histodata is not None:
-                if output_df.index[-1] > histodata.index[-1]:
-                    dend = output_df.index[-1]
-                    dstart = histodata.index[-1]
-                    df_calc = dfunc.take_interval(output_df, dstart=dstart, dend=dend, inplace=True)
-                    df_calc = df_calc ** power
-                    output_df = histodata.append(df_calc)
-                    output_df = output_df[~output_df.index.duplicated(take_last=False)]
-
-                else:
-                    output_df = histodata
-            else:
+            # if histodata is not None:
+            #     if output_df.index[-1] > histodata.index[-1]:
+            #         dend = output_df.index[-1]
+            #         dstart = histodata.index[-1]
+            #         df_calc = dfunc.take_interval(output_df, dstart=dstart, dend=dend, inplace=True)
+            #         df_calc = df_calc ** power
+            #         output_df = histodata.append(df_calc)
+            #         output_df = output_df[~output_df.index.duplicated(take_last=False)]
+            #
+            #     else:
+            #         output_df = histodata
+            # else:
                 output_df = output_df ** power
 
     if 'levels' in parameters and operation != 'cat':

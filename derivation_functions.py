@@ -257,7 +257,7 @@ def get_columns(df, cols=None, forceuppercase=True):
             return []
 
 
-def apply_timeshift(df, shift=1, freq='B', ownfreq=None, refdate=None, histodata=None):
+def apply_timeshift(df, shift=1, freq='B', ownfreq=None, refdate=None):
     """
     This function returns a copy of the current dataframe, with translated dates of a delay(shift).
 
@@ -507,7 +507,7 @@ def calcul_combi(df, idx1, idx2, coeff1, coeff2, constant, islinear, transfo):
 
 def apply_combi(df1, df2, idx1=0, coeff1=1,
                 idx2=1, coeff2=0, constant=0,
-                islinear=True, transfo=None, histodata=None):
+                islinear=True, transfo=None):
     """
       This function returns  the linear or exponential combination of two columns
 
@@ -561,27 +561,27 @@ def apply_combi(df1, df2, idx1=0, coeff1=1,
     df = pd.concat([df1, df2], axis=1)
 
     df = df.fillna(method='ffill')
-    print(df1.index[0], df2.index[0])
-    if histodata is not None:
-        dfcombi = histodata.copy()
-        dfcombi = dfcombi.dropna()
-        idx = dfcombi.index[-1]
-        if df.index[-1] > dfcombi.index[-1]:
-            print('*****************************************')
-            dfc = df.loc[idx:]
-            dfco = histodata.loc[idx:]
-            df_calc = pd.concat([dfc, dfco], axis=1)
-            data = calcul_combi(df_calc, idx1=idx1, idx2=idx2, coeff1=coeff1,
-                                coeff2=coeff2, constant=constant, islinear=islinear, transfo=transfo)
-            print('-*-*-*-*-data {} -*-*-*-'.format(data))
-            new_df = histodata.append(data)
-            new_df = new_df[~new_df.index.duplicated(take_last=False)]
-        else:
-            new_df = histodata
-            print('******--------------------**************')
-
-    else:
-        new_df = calcul_combi(df, idx1=idx1, idx2=idx2, coeff1=coeff1,
+    # print(df1.index[0], df2.index[0])
+    # if histodata is not None:
+    #     dfcombi = histodata.copy()
+    #     dfcombi = dfcombi.dropna()
+    #     idx = dfcombi.index[-1]
+    #     if df.index[-1] > dfcombi.index[-1]:
+    #         print('*****************************************')
+    #         dfc = df.loc[idx:]
+    #         dfco = histodata.loc[idx:]
+    #         df_calc = pd.concat([dfc, dfco], axis=1)
+    #         data = calcul_combi(df_calc, idx1=idx1, idx2=idx2, coeff1=coeff1,
+    #                             coeff2=coeff2, constant=constant, islinear=islinear, transfo=transfo)
+    #         print('-*-*-*-*-data {} -*-*-*-'.format(data))
+    #         new_df = histodata.append(data)
+    #         new_df = new_df[~new_df.index.duplicated(take_last=False)]
+    #     else:
+    #         new_df = histodata
+    #         print('******--------------------**************')
+    #
+    # else:
+    new_df = calcul_combi(df, idx1=idx1, idx2=idx2, coeff1=coeff1,
                               coeff2=coeff2, constant=constant, islinear=islinear, transfo=transfo)
     return new_df
 
@@ -624,7 +624,6 @@ def take_columns(df, cols=None, forceuppercase=True):
 
 def apply_ewma(df, emadecay=None, span=1, inplace=True,
                cols=None, wres=True, normalize=True,
-               histoemadata=None, overridedepth=0,
                stdev_min=1e-5):
     """
     This function returns the ema series of a set of columns for a given pseudo-span
@@ -680,34 +679,34 @@ def apply_ewma(df, emadecay=None, span=1, inplace=True,
         if emadecay > 0:
             span = 2.0 / emadecay - 1
 
-    if histoemadata is not None:
-        # historique d'ema fourni
-        dfema = histoemadata.copy()
-        dfema = dfema.dropna()
-        idx = dfema.index[-1]
-
-        if df.index[-1] > dfema.index[-1]:
-            c = (dfema.iloc[-1].values[0] - df.loc[idx].values[0]) / (dfema.iloc[-2].values[0] - df.loc[idx].values[0])
-            print('c {}'.format(c))
-            dfprim = df.loc[idx:]
-            df = df.loc[idx:]
-            dfx = pd.concat([dfema, dfprim], axis=1)
-            dfx.columns = ['EMA', 'PRIM']
-
-            for i in range(1, len(dfx)):
-                dfx['EMA'].iloc[i] = c * dfx['EMA'].iloc[i-1] + (1 - c) * dfx['PRIM'].iloc[i-1]
-            data = pd.DataFrame(data=dfx['EMA'], columns=['EMA'])
-            new_df = histoemadata.append(data)
-            new_df = new_df[~new_df.index.duplicated(take_last=False)]
-            emadata = new_df
-        else:
-            new_df = histoemadata
-            emadata = histoemadata
-
-    else:
+    # if histoemadata is not None:
+    #     # historique d'ema fourni
+    #     dfema = histoemadata.copy()
+    #     dfema = dfema.dropna()
+    #     idx = dfema.index[-1]
+    #
+    #     if df.index[-1] > dfema.index[-1]:
+    #         c = (dfema.iloc[-1].values[0] - df.loc[idx].values[0]) / (dfema.iloc[-2].values[0] - df.loc[idx].values[0])
+    #         print('c {}'.format(c))
+    #         dfprim = df.loc[idx:]
+    #         df = df.loc[idx:]
+    #         dfx = pd.concat([dfema, dfprim], axis=1)
+    #         dfx.columns = ['EMA', 'PRIM']
+    #
+    #         for i in range(1, len(dfx)):
+    #             dfx['EMA'].iloc[i] = c * dfx['EMA'].iloc[i-1] + (1 - c) * dfx['PRIM'].iloc[i-1]
+    #         data = pd.DataFrame(data=dfx['EMA'], columns=['EMA'])
+    #         new_df = histoemadata.append(data)
+    #         new_df = new_df[~new_df.index.duplicated(take_last=False)]
+    #         emadata = new_df
+    #     else:
+    #         new_df = histoemadata
+    #         emadata = histoemadata
+    #
+    # else:
         # recalcul de la totalité des données de l'ema
-        emadata = pd.ewma(df, span=span, adjust=True)
-        new_df = emadata
+    emadata = pd.ewma(df, span=span, adjust=True)
+    new_df = emadata
 
     cols = get_columns(df, cols)
 
