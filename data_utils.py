@@ -279,7 +279,8 @@ def load_from_file(path, round):
             df.columns = [x.upper() for x in df.columns]
             return df
         else:
-            warnings.warn('Empty Dataframe: {} '.format(path))
+            # warnings.warn('Empty Dataframe: {} '.format(path))
+            return pd.DataFrame()
 
     else:
         warnings.warn('Unknown extension: %s' % extension)
