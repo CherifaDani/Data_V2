@@ -8,7 +8,7 @@ import pandas as pd
 """
 
 
-xls = pd.ExcelFile('1V.xlsx', on_demand=True)
+xls = pd.ExcelFile('18 07 Script_Derivation_1V.xlsx', on_demand=True)
 sheets = xls.sheet_names
 # print(sheets)
 dfx = pd.DataFrame()
@@ -34,6 +34,7 @@ for sheet in e:
     df = pd.concat([df1, df2], axis=1)
     dfx = pd.concat([dfx, df])
 dfx = dfx.dropna(how='any')
-
+list_cols = ['var_name', 'var_type', 'last_update', 'backup', 'depth_control', 'refdate']
+dfy = pd.DataFrame(data=dfx, columns=list_cols)
 print(dfx.shape)
-dfx.to_csv('variable_state.csv', index=False)
+dfy.to_csv('variable_state2.csv', index=False)
