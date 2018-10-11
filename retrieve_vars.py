@@ -37,4 +37,4 @@ dfx = dfx.dropna(how='any')
 list_cols = ['var_name', 'var_type', 'last_update', 'backup', 'depth_control', 'refdate']
 dfy = pd.DataFrame(data=dfx, columns=list_cols)
 print(dfx.shape)
-dfy.to_csv('variable_state2.csv', index=False)
+dfy.to_csv('variable_state.csv', index=False)

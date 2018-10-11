@@ -462,7 +462,6 @@ class Variable(object):
         var_name = self.get_param('var_name')
         # ope_dict = self.get_param('ope_dict')
 
-
         logger.debug('The dictionary of the variable {} is: {}'.
                      format(var_name, var_dict))
 

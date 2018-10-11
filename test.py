@@ -8,7 +8,7 @@ import data_utils
 import numpy as np
 import time
 
-script_path = '1v.xlsx'
+script_path = '18 07 Script_Derivation_1V.xlsx'
 state_path = 'variable_state.csv'
 """
 Date: 30-07-2018
