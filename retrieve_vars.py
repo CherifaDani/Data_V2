@@ -7,10 +7,13 @@ import pandas as pd
 
 """
 
+from_xls = '/home/cluster/drop_ch/Dropbox/Project Data v2.0/Docs/18 07 Script_Derivation_1V_bis.xlsx'
+to_csv =  '/home/cluster/drop_ch/Dropbox/Project Data v2.0/Docs/var_state.csv'
 
-xls = pd.ExcelFile('1V.xlsx', on_demand=True)
+
+xls = pd.ExcelFile(from_xls, on_demand=True)
 sheets = xls.sheet_names
-# print(sheets)
+print(sheets)
 dfx = pd.DataFrame()
 e = []
 for x in sheets:
@@ -36,4 +39,4 @@ for sheet in e:
 dfx = dfx.dropna(how='any')
 
 print(dfx.shape)
-dfx.to_csv('variable_state.csv', index=False)
+dfx.to_csv(to_csv, index=False)

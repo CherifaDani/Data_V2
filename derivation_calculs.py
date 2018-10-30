@@ -2,6 +2,7 @@
 import pandas as pd
 import derivation_functions as dfunc
 import numpy as np
+import datetime
 
 glbnano = 86400000000000.0
 
@@ -55,6 +56,22 @@ def apply_operation(var_list, freq, operation, parameters):
     # print('colout')
     # print(type(colout))
     # print(colout)
+    # if operation == 'timeshift':
+    #     shift = parameters.get('shift', 0)
+    #     if shift != 0 or freq is not None:
+    #         output_df = dfunc.apply_timeshift(idx0, shift=shift, freq=freq, histodata=histodata)
+    #         # if idx1 is not None:
+    #         #     idx1 = dfunc.apply_timeshift(idx1, shift=shift, freq=freq, histodata=df_derived)
+
+    # if operation == 'timeshift':
+    #     shift = parameters.get('shift', 0)
+    #     output_df = idx0
+    fill_rules = map(lambda x: x.get_param('fill_rule'), var_list)
+
+    if len(fill_rules) > 1:
+        fill_rule = fill_rules[1]
+    else:
+        fill_rule = 'ffill'
     if 'shift' in parameters:
 
         shift = parameters['shift']
@@ -76,7 +93,10 @@ def apply_operation(var_list, freq, operation, parameters):
         coeff2 = parameters.get('coeff2', 0)
         islinear = parameters.get('lin', True)
         transfo = parameters.get('transfo', None)
-        output_df = dfunc.apply_combi(df1=idx0, df2=idx1, coeff1=coeff1, coeff2=coeff2,
+        idx1 = parameters.get('col1', 0)
+        idx2 = parameters.get('col2', 1)
+
+        output_df = dfunc.apply_combi(df1=dfs[0], df2=dfs[1], idx1=idx1, idx2=idx2, coeff1=coeff1, coeff2=coeff2,
                                       islinear=islinear, transfo=transfo)
 
     elif operation == 'pctdelta':
@@ -105,7 +125,7 @@ def apply_operation(var_list, freq, operation, parameters):
         wres = parameters.get('wres', True)
         # wz = parameters.get('wZ', True)
         output_df = dfunc.apply_ewma(df=idx0, emadecay=emadecay, wres=wres, inplace=True,
-                                     normalize=True, stdev_min=1e-5, histoemadata=None)
+                                     normalize=True, stdev_min=1e-5)
 
     elif operation == 'futuresroll':
         rolldict = {'freq': parameters.get('freq', 'B'),
@@ -140,16 +160,17 @@ def apply_operation(var_list, freq, operation, parameters):
                                          fillinit=fillinit,
                                          algo=algo)
     elif operation == 'corr':
-        period = parameters.get('period', 0)
+        period = parameters.get('period', 1)
         window = parameters.get('window', 20)
         lag = parameters.get('lag', 0)
         inpct = parameters.get('inpct', True)
         exponential = parameters.get('exponential', True)
         output_df = dfunc.apply_corr(df1=idx0, df2=idx1, period=period, inpct=inpct,
                                      lag=lag,
-                                     exponential=exponential, span=window)
+                                     exponential=exponential, span=window,
+                                     fill_rule=fill_rule)
     elif operation == 'delta_acorr':
-        period = parameters.get('period', 0)
+        period = parameters.get('period', 1)
         shortwindow = parameters.get('shortwindow', 20)
         longwindow = parameters.get('longwindow', 100)
         lag = parameters.get('lag', 0)
@@ -206,23 +227,57 @@ def apply_operation(var_list, freq, operation, parameters):
     if 'mult' in parameters:
         mult = parameters['mult']
         if mult != 1:
-            return output_df * mult
+            # if histodata is not None:
+            #     if output_df.index[-1] > histodata.index[-1]:
+            #         dend = output_df.index[-1]
+            #         dstart = histodata.index[-1]
+            #         df_calc = dfunc.take_interval(output_df, dstart=dstart, dend=dend, inplace=True)
+            #         df_calc = df_calc * mult
+            #         output_df = histodata.append(df_calc)
+            #         output_df = output_df[~output_df.index.duplicated(take_last=False)]
+            #
+            #     else:
+            #         output_df = histodata
+            # else:
+                output_df = output_df * mult
 
     if 'lag' in parameters:
         lag = parameters['lag']
         if lag != 0:
-            return dfunc.apply_lag(output_df, lag=lag, freq=freq)
+            output_df = dfunc.apply_lag(output_df, lag=lag, freq=freq)
     if 'add' in parameters:
-        add = parameters['add']
-        if add != 0:
-            return output_df + parameters['add']
-
+        add_val = parameters['add']
+        if add_val != 0:
+            # if histodata is not None:
+            #     if output_df.index[-1] > histodata.index[-1]:
+            #         dend = output_df.index[-1]
+            #         dstart = histodata.index[-1]
+            #         df_calc = dfunc.take_interval(output_df, dstart=dstart, dend=dend, inplace=True)
+            #         df_calc = df_calc + add_val
+            #         output_df = histodata.append(df_calc)
+            #         output_df = output_df[~output_df.index.duplicated(take_last=False)]
+            #
+            #     else:
+            #         output_df = histodata
+            # else:
+                output_df = output_df + add_val
     if 'power' in parameters:
         power = parameters['power']
         if power != 1:
-            # pdb.set_trace()
-            df = output_df ** power
-            output_df = pd.DataFrame(index=df.index, data=df.values, columns=df.columns)
+            # if histodata is not None:
+            #     if output_df.index[-1] > histodata.index[-1]:
+            #         dend = output_df.index[-1]
+            #         dstart = histodata.index[-1]
+            #         df_calc = dfunc.take_interval(output_df, dstart=dstart, dend=dend, inplace=True)
+            #         df_calc = df_calc ** power
+            #         output_df = histodata.append(df_calc)
+            #         output_df = output_df[~output_df.index.duplicated(take_last=False)]
+            #
+            #     else:
+            #         output_df = histodata
+            # else:
+                output_df = output_df ** power
+
     if 'levels' in parameters and operation != 'cat':
         if levels > 0:
             quantilize = parameters['quantilize']
@@ -241,4 +296,6 @@ def apply_operation(var_list, freq, operation, parameters):
             output_df = dfunc.apply_filter(idx0, period=period, min_value=min_value,
                                            max_value=max_value, diff_order=diff_order,
                                            inpct=inpct, inplace=True, cols=None)
+
+    output_df = dfunc.exclude_interval(output_df, datetime.datetime(year=2001, month=9, day=11), datetime.datetime(year=2001, month=9, day=18))
     return output_df

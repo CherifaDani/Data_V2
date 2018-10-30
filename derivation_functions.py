@@ -13,7 +13,7 @@ try:
     import data_utils
 except ImportError:
     data_utils = None
-    raise ImportError("Don't find the package control_utils")
+    raise ImportError("Don't find the package data_utils")
 
 try:
     import var_logger
@@ -281,9 +281,28 @@ def apply_timeshift(df, shift=1, freq='B', ownfreq=None, refdate=None):
     A shifted dataframe
     """
     new_df = df.copy()
-
     # pas de décalage: on peut changer la fréquence
     # if freq <> 'B':
+    # if histodata is not None:
+    #     if df.index[-1] > histodata.index[-1]:
+    #         dend = df.index[-1]
+    #         dstart = histodata.index[-1]
+    #         df_calc = take_interval(df, dstart=dstart, dend=dend, inplace=False)
+    #         # print(df_calc)
+    #         # dfx = df_calc.tshift(2, freq=freq)
+    #         # print(dfx)
+    #         # dfy = dfx.append(df_calc)
+    #         # dfy.sort_index(ascending=True, inplace=True)
+    #         # print(dfy)
+    #         # dfy = dfy[~dfy.index.duplicated(take_last=False)]
+    #         # ndf = histodata.append(dfy)
+    #         # ndf.sort_index(ascending=True, inplace=True)
+    #         # # ndf = ndf[~ndf.index.duplicated(take_last=True)]
+    #         # print ndf
+    #     else:
+    #         return histodata
+
+    # else:
     if ownfreq is not None and ownfreq != freq:
         pass
         # new_df=new_df.change_freq(freq=ownfreq)
@@ -381,138 +400,190 @@ def index_df(df1, df2):
                 newds2 = newds.reindex(index=df1.index, fill_value=value)
             if len(newds2.dropna()) == 0:
                 pass
-        except:
+        except Exception as e:
             nl = len(newds.index)
             nul = len(np.unique(newds.index.values))
         nul = len(np.unique(newds.index.values))
         return newds2
 
 
-def apply_combi(df1, df2, coeff1=1, coeff2=0, constant=0,
+def calcul_combi(df, idx1, idx2, coeff1, coeff2, constant, islinear, transfo):
+    """
+          This function returns  the linear or exponential combination of two columns
+
+          Parameters
+          ----------
+          df1 : {Dataframe type}
+                The input dataframe
+
+          df2 : {Dataframe type}
+                The input dataframe
+
+          coeff1 : {Float type}
+                    A multiplicative coefficient if islinear is True,
+                    else exponential, applied to the first DF
+                    Default: 1
+
+          coeff2 : {Float type}
+                    A multiplicative coefficient if islinear is True,
+                    else exponential, applied to the second DF
+                    Default: 0
+
+          constant : {Float type}
+                     This value is added if islinear is true, else multiplied.
+                      Default: 0
+
+          islinear : {Boolean type}
+                     Designates the nature of the operation
+                     True: addition
+                     False: multiplication
+                     default: None
+
+          Return
+          ------
+          new_df : The output dataframe
+          """
+
+    '''Renvoie la combinaison linéaire ou exponentielle de deux colonnes. '''
+    cols1 = get_columns(df, idx1)
+    if len(cols1) > 0:
+        col1 = cols1[0]
+        datacol1 = df[col1]
+    else:
+        datacol1 = None
+    cols2 = get_columns(df, idx2)
+    if len(cols2) > 0:
+        col2 = cols2[0]
+        datacol2 = df[col2]
+
+    else:
+        datacol2 = None
+
+    c1null = c1one = c1neg = c2null = c2one = c2neg = False
+    if coeff1 == 0 or datacol1 is None:
+        c1null = True
+    elif abs(coeff1) == 1:
+        c1one = True
+    if coeff1 < 0:
+        c1neg = True
+    if coeff2 == 0 or datacol2 is None:
+        c2null = True
+    elif abs(coeff2) == 1:
+        c2one = True
+    if coeff2 < 0:
+        c2neg = True
+    if islinear:
+
+        combiarray = np.zeros(len(df.index)) + constant
+        if not c1null:
+            combiarray = datacol1.values * coeff1 + constant
+        if not c2null:
+            combiarray = combiarray + datacol2.values * coeff2
+    else:
+
+        # constante égale à 0 en multiplicatif: on la prend pour 1
+        if constant == 0:
+            constant = 1
+        combiarray = np.ones(len(df.index)) * constant
+        if (datacol1 is not None):
+            combiarray = np.power(datacol1.values, coeff1) * constant
+        if (datacol2 is not None):
+            combiarray = combiarray * np.power(datacol2.values, coeff2)
+
+    if transfo is not None:
+        if str(transfo).lower() == 'tanh':
+            combiarray = np.tanh(combiarray)
+        elif str(transfo).lower() == 'sign':
+            combiarray = np.sign(combiarray)
+            # import pdb; pdb.set_trace()
+    #  en cas de copie d'objet: on ne renvoie que la colonne résultat
+    strc1 = strsgn1 = strc2 = strsgn2 = ''
+
+    data = pd.DataFrame(index=df.index,
+                        data=combiarray,
+                        columns=['VALUE'])
+    return data
+
+
+def apply_combi(df1, df2, idx1=0, coeff1=1,
+                idx2=1, coeff2=0, constant=0,
                 islinear=True, transfo=None):
     """
-    This function returns  the linear or exponential combination of two columns
+      This function returns  the linear or exponential combination of two columns
 
-    Parameters
-    ----------
-    df1 : {Dataframe type}
-          The input dataframe
+      Parameters
+      ----------
+      df1 : {Dataframe type}
+            The input dataframe
 
-    df2 : {Dataframe type}
-          The input dataframe
+      df2 : {Dataframe type}
+            The input dataframe
 
-    coeff1 : {Float type}
-              A multiplicative coefficient if islinear is True,
-              else exponential, applied to the first DF
-              Default: 1
+      coeff1 : {Float type}
+                A multiplicative coefficient if islinear is True,
+                else exponential, applied to the first DF
+                Default: 1
 
-    coeff2 : {Float type}
-              A multiplicative coefficient if islinear is True,
-              else exponential, applied to the second DF
-              Default: 0
-
-    constant : {Float type}
-               This value is added if islinear is true, else multiplied.
+      coeff2 : {Float type}
+                A multiplicative coefficient if islinear is True,
+                else exponential, applied to the second DF
                 Default: 0
 
-    islinear : {Boolean type}
-               Designates the nature of the operation
-               True: addition
-               False: multiplication
-               default: None
+      constant : {Float type}
+                 This value is added if islinear is true, else multiplied.
+                  Default: 0
 
-    Return
-    ------
-    new_df : The output dataframe
-    """
-    # print("df1 {}".format(df1))
-    # print('df2{}'.format(df2))
-    newds2 = None
+      islinear : {Boolean type}
+                 Designates the nature of the operation
+                 True: addition
+                 False: multiplication
+                 default: None
 
+      Return
+      ------
+      new_df : The output dataframe
+      """
 
-            # Init.Log('L\'index de {0} est de longueur {1} et a {2} doublons' \
-            #          .format(newds.name, nl, nl - nul),
-            #          doexit=False)
-            # return df2
+    '''Renvoie la combinaison linéaire ou exponentielle de deux colonnes. '''
 
     # df = pd.concat([df1, df2], axis=1)
-    # df = df1.merge(df2, how='outer', right_index=True, left_index=True)
-    # df = pd.concat([df1, df1], axis=1)
-    # df = pd.DataFrame()
-    # df = df.fillna(df2)
-    # df = df.fillna(method='ffill')
-    # df = df1.merge(df2, left_index=True, right_index=True)
 
-    # df.columns = ['df1', 'df2']
-
-    # df = newds2
-    print('*****************************')
-    # print(newds2)
-    # print(newds)
-    # print(df2)
-    df1 = index_df(df1, df2)
-    df2 = index_df(df2, df1)
+    # if df1.index[0] < df2.index[0]:
+    #     idx = df1.index
+    #     df2 = df2.reindex(index=idx, method='ffill')
+    #
+    # elif df1.index[0] > df2.index[0]:
+    #     idx = df2.index
+    #     df1 = df1.reindex(index=idx, method='ffill')
+    #
+    # else:
+    #     pass
     df = pd.concat([df1, df2], axis=1)
-    print(df)
-    # print(pd.concat([newds, df2], axis=1))
-    # cols1 = get_columns(df)
-    #
-    # if len(cols1) > 0:
-    #     col1 = cols1[0]
-    #     print(col1)
-    #     datacol1 = df[col1]
-    #
-    # else:
-    #     datacol1 = None
-    #
-    # cols2 = get_columns(df)
-    # if len(cols2) > 0:extendToDate
-    #     col2 = cols2[1]
-    #     datacol2 = df[col2]
-    #
-    # else:
-    #     datacol2 = None
-    # c1null = c1one = c1neg = c2null = c2one = c2neg = False
-    # if coeff1 == 0 or datacol1 is None:
-    #     c1null = True
-    # elif abs(coeff1) == 1:
-    #     c1one = True
-    # if coeff1 < 0:
-    #     c1neg = True
-    # if coeff2 == 0 or datacol2 is None:
-    #     c2null = True
-    # elif abs(coeff2) == 1:
-    #     c2one = True
-    # if coeff2 < 0:
-    #     c2neg = True
-    #
-    # if islinear:
-    #     combiarray = np.zeros(len(df.index)) + constant
-    #     if not c1null:
-    #         combiarray = datacol1.values * coeff1 + constant
-    #
-    #     if not c2null:
-    #         combiarray = combiarray + datacol2.values * coeff2
+
+    df = df.fillna(method='ffill')
+    # print(df1.index[0], df2.index[0])
+    # if histodata is not None:
+    #     dfcombi = histodata.copy()
+    #     dfcombi = dfcombi.dropna()
+    #     idx = dfcombi.index[-1]
+    #     if df.index[-1] > dfcombi.index[-1]:
+    #         print('*****************************************')
+    #         dfc = df.loc[idx:]
+    #         dfco = histodata.loc[idx:]
+    #         df_calc = pd.concat([dfc, dfco], axis=1)
+    #         data = calcul_combi(df_calc, idx1=idx1, idx2=idx2, coeff1=coeff1,
+    #                             coeff2=coeff2, constant=constant, islinear=islinear, transfo=transfo)
+    #         print('-*-*-*-*-data {} -*-*-*-'.format(data))
+    #         new_df = histodata.append(data)
+    #         new_df = new_df[~new_df.index.duplicated(take_last=False)]
+    #     else:
+    #         new_df = histodata
+    #         print('******--------------------**************')
     #
     # else:
-    #
-    #     # constante égale à 0 en multiplicatif: on la prend pour 1
-    #     if constant == 0:
-    #         constant = 1
-    #     combiarray = np.ones(len(df.index)) * constant
-    #
-    #     if (datacol1 is not None):
-    #         combiarray = np.power(datacol1.values, coeff1) * constant
-    #     if (datacol2 is not None):
-    #         combiarray = combiarray * np.power(datacol2.values, coeff2)
-    # if transfo is not None:
-    #     if str(transfo).lower() == 'tanh':
-    #         combiarray = np.tanh(combiarray)
-    #     elif str(transfo).lower() == 'sign':
-    #         combiarray = np.sign(combiarray)
-    # new_df = pd.DataFrame(index=df.index, data=combiarray)
-    # new_df.columns = ['COMBI']
-    # return new_df
+    new_df = calcul_combi(df, idx1=idx1, idx2=idx2, coeff1=coeff1,
+                              coeff2=coeff2, constant=constant, islinear=islinear, transfo=transfo)
+    return new_df
 
 
 def take_columns(df, cols=None, forceuppercase=True):
@@ -533,27 +604,26 @@ def take_columns(df, cols=None, forceuppercase=True):
 
     Return
     ------
-    ds : The output dataframe
+    new_df : The output dataframe
     """
     if cols is None:
         return df
     columns = get_columns(df, cols=cols, forceuppercase=forceuppercase)
     if len(columns) > 0:
         try:
-            ds = pd.DataFrame(index=df.index,
-                              data=df[columns],
-                              columns=columns)
+            new_df = pd.DataFrame(index=df.index,
+                                  data=df[columns],
+                                  columns=columns)
 
         except Exception as e:
             return None
     else:
-        ds = None
-    return ds
+        new_df = None
+    return new_df
 
 
 def apply_ewma(df, emadecay=None, span=1, inplace=True,
                cols=None, wres=True, normalize=True,
-               histoemadata=None, overridedepth=0,
                stdev_min=1e-5):
     """
     This function returns the ema series of a set of columns for a given pseudo-span
@@ -603,61 +673,52 @@ def apply_ewma(df, emadecay=None, span=1, inplace=True,
     ------
     new_df : The output dataframe
     """
-    usehistoforinit = False
-    if (histoemadata is not None) \
-            and (type(histoemadata) == type(df)) \
-            and (len(histoemadata.index) > 0) \
-            and np.array_equiv(df.columns, histoemadata.columns):
-        if (histoemadata.index[0] <= df.index[-1 - overridedepth]) and (
-                histoemadata.index[-1] >= df.index[-1 - overridedepth]):
-            usehistoforinit = True
 
-    df.sort_index(inplace=True)
-    if usehistoforinit:
-        # cas où on fournit un historique des ema
-        histoemadata.sort_index(inplace=True)
-
-    cols = get_columns(df, cols)
-    # cols = df.columns
-    # if not(col in self.columns) : return new_df
-    # import pdb; pdb.set_trace()
-    # extraction des données à moyenner dans un DataFrame
-    datacols = pd.DataFrame(data=df[cols])
-    if inplace:
-        new_df = df
-    else:
-        new_df = df.copy()
-        new_df = new_df.take_columns(cols)
     # calculer la période synthétique correspondant au coeff s'il est fourni
     if type(emadecay) in [int, float]:
         if emadecay > 0:
             span = 2.0 / emadecay - 1
 
-    if usehistoforinit:
-        # historique d'ema fourni
-        dhistolast = histoemadata.index[-1]
-        dnewlast = df.index[-1]
-        # si plus d'historique que de données nouvelles, rien à faire
-        if dhistolast >= dnewlast:
-            return histoemadata
-        if type(dhistolast) == int:
-            dfirstnewema = dhistolast + 1
-        else:
-            dfirstnewema = dhistolast + timedelta(days=1)
-        # extraction du segment de nouvelles données
-        datacols = datacols.ix[dfirstnewema: dnewlast]
-        # calcul de l'ema
-        newemadata = pd.ewma(datacols, span=span, wres=wres, normalize=normalize)
-        # recollement des nouvelles données
-        emadata = histoemadata
-        emadata.patch_append(newemadata, check_overlap=True)
-    else:
+    # if histoemadata is not None:
+    #     # historique d'ema fourni
+    #     dfema = histoemadata.copy()
+    #     dfema = dfema.dropna()
+    #     idx = dfema.index[-1]
+    #
+    #     if df.index[-1] > dfema.index[-1]:
+    #         c = (dfema.iloc[-1].values[0] - df.loc[idx].values[0]) / (dfema.iloc[-2].values[0] - df.loc[idx].values[0])
+    #         print('c {}'.format(c))
+    #         dfprim = df.loc[idx:]
+    #         df = df.loc[idx:]
+    #         dfx = pd.concat([dfema, dfprim], axis=1)
+    #         dfx.columns = ['EMA', 'PRIM']
+    #
+    #         for i in range(1, len(dfx)):
+    #             dfx['EMA'].iloc[i] = c * dfx['EMA'].iloc[i-1] + (1 - c) * dfx['PRIM'].iloc[i-1]
+    #         data = pd.DataFrame(data=dfx['EMA'], columns=['EMA'])
+    #         new_df = histoemadata.append(data)
+    #         new_df = new_df[~new_df.index.duplicated(take_last=False)]
+    #         emadata = new_df
+    #     else:
+    #         new_df = histoemadata
+    #         emadata = histoemadata
+    #
+    # else:
         # recalcul de la totalité des données de l'ema
-        emadata = pd.ewma(datacols, span=span, adjust=True)
-        new_df = emadata
+    emadata = pd.ewma(df, span=span, adjust=True)
+    new_df = emadata
+
+    cols = get_columns(df, cols)
+
+    new_df.columns = [cols]
+    print('new_dfxx {}'.format(new_df))
+    emadata.columns = [cols]
+
     # calcul du résidu
     if wres:
+        print('df {}'.format(df))
         rescols = df[cols] - emadata
+        print('rescols {}'.format(rescols))
         # calcul du ZScore
         if normalize:
             stdevcols = pd.ewmstd(rescols, span=span)
@@ -665,155 +726,122 @@ def apply_ewma(df, emadecay=None, span=1, inplace=True,
             zcols = rescols * 0.0
             zcols[stdevcols > 0] = rescols[stdevcols > 0] / stdevcols[stdevcols > 0]
         for col in cols:
-            new_df[col] = emadata[col]
+            colname = 'EMA_'
+            new_df[colname] = emadata[col]
             if wres:
-                new_df[col] = rescols[col]
+                colname = 'RES'
+                new_df[colname] = rescols[col]
                 if normalize:
-                    new_df[col] = zcols[col]
+                    colname = 'Z'
+                    new_df[colname] = zcols[col]
+
     return new_df
 
 
-def apply_corr(df1, df2, period=1,
-               span=20, exponential=True,
-               inpct=True, lag=0):
+def apply_corr(df1, df2,
+               period=1,
+               span=20,
+               exponential=True,
+               inpct=True,
+               cols=None,
+               lag=0,
+               fill_rule='ffill'):
     """
-        This function computes the correlation between two DFs
+   This function computes the correlation between two DFs
 
-        Parameters
-        ----------
-        df1 : {Dataframe type}
-              The input dataframe
+   Parameters
+   ----------
+   df1 : {Dataframe type}
+         The input dataframe
 
-        df2 : {Dataframe type}
-              The input dataframe
+   df2 : {Dataframe type}
+         The input dataframe
 
 
-        period : {Integer type}
-                 If period = 0: Apply correlation between two DFs
-                 If period > 0: Apply correlation of variations over period
-                 Default: 1
+   period : {Integer type}
+            If period = 0: Apply correlation between two DFs
+            If period > 0: Apply correlation of variations over period
+            Default: 1
 
-        exponential : {Boolean type}
-                    Default: True
+   exponential : {Boolean type}
+               Default: True
 
-        span : {Integer type}
-                The rolling window size
-                Default: 20
+   span : {Integer type}
+           The rolling window size
+           Default: 20
 
-        inpct : {Boolean type}
-                Use of arithmetic or geometric returns
-                Default: True
+   inpct : {Boolean type}
+           Use of arithmetic or geometric returns
+           Default: True
 
-        lag : {Integer type}
-              Delay on the second column
-              Default: 0
+   lag : {Integer type}
+         Delay on the second column
+         Default: 0
 
-        Return
-        ------
-        new_df : The output dataframe
+   Return
+   ------
+   new_df : The output dataframe
 
     """
-    # hm_time = df2.index[0]
-    #
-    # df1 = set_daytime(df1, hm_time=hm_time)
-    # # print(df1)
-    # df1.columns = ['df']
-    # df2.columns = ['df']
-    idx_all = pd.bdate_range(start=df2.index[0], end=df2.index[-1], freq='B')
-    # effacer l'heure pour synchronisation
-    df1 = set_daytime(df1, datetime(2000, 1, 1))
-    df2 = set_daytime(df2, datetime(2000, 1, 1))
-    # élargir le calendrier pour inclure les dates de rolls de façon certaine
-    # df1 = df1.reindex(index=idx_all, method=None)
-    df = pd.concat([df1, df2], axis=1)
-    df = df.fillna(method='ffill')
-    df.columns = ['df1', 'df2']
 
-    cols = get_columns(df)
+    new_df = pd.DataFrame()
+    print(df1, df2)
+    if df1.index[0] < df2.index[0]:
+        idx = df1.index
+        df2 = df2.reindex(index=idx, method='ffill')
+        df = pd.concat([df1, df2], axis=1)
+        df.columns = ['idx0', 'idx1']
+
+        df['idx1'] = df['idx1'].fillna(method=fill_rule)
+        # df = df.dropna(how='any')
+
+    elif df1.index[0] > df2.index[0]:
+        idx = df2.index
+        df1 = df1.reindex(index=idx, method='ffill')
+        df = pd.concat([df1, df2], axis=1)
+        df.columns = ['idx0', 'idx1']
+
+        df['idx1'] = df['idx1'].fillna(method=fill_rule)
+        # df = df.dropna(how='any')
+
+    else:
+        df = pd.concat([df1, df2], axis=1)
+        df.columns = ['idx0', 'idx1']
+
+        df['idx1'] = df['idx1'].fillna(method=fill_rule)
+        df = df.dropna(how='any')
+
+    cols = get_columns(df, cols)
     if len(cols) == 1:
         col1 = cols[0]
         col2 = col1
-
     else:
         col1 = cols[0]
         col2 = cols[1]
-
-    # #  si period == 0 c'est l'autocorrélation des valeurs
-    # #  et non des variations qui est calculée
     startval = period + lag * period
     if period == 0:
         data1 = df[col1]
         data2 = df[col2].shift(periods=lag)
-
     else:
         if inpct:
             data1 = df[col1].pct_change(period)[startval:]
-
             data2 = df[col2].pct_change(period).shift(periods=lag * period)[startval:]
-
         else:
             data1 = df[col1].diff(period)[startval:]
             data2 = df[col2].diff(period).shift(periods=lag * period)[startval:]
 
     if exponential:
+        # corrdata = pd.ewmcorr(data1, data2, span=span)
         corrdata = pd.ewmcorr(data1[startval:], data2[startval:], span=span)
+
     else:
         corrdata = pd.rolling_corr(data1, data2, window=span)
 
-    new_df = pd.DataFrame(index=df.index, data=(corrdata))
-    new_df.columns = ['CORR']
-
+    corrname = 'CORR'
+    corrdata = corrdata.dropna()
+    new_df['Corr'] = corrdata
+    new_df.columns = [corrname]
     return new_df
-
-# def apply_corr(dfx, dfy, span=20,  period=1,
-#                exponential=True,
-#                inpct=True, cols=None, lag=0
-#                ):
-#     '''Renvoie la série des corrélations entre deux colonnes d'un Dataset
-#        period: si 0, corrélation des valeurs, si > 0, corrélation des variations sur period
-#        lag2: retard sur la seconde colonne
-#        cols: spécifications de 1 ou 2 colonnes
-#     '''
-#     if dfy is not None:
-#         [df1, df2] = reindex(dfx, dfy)
-#     else:
-#         df1 = dfx
-#         df2 = dfx
-#     # print(df1.shape)
-#     new_df = pd.DataFrame(index=dfx.index)
-#     col1 = df1
-#     col2 = df2
-#     # if len(cols) == 1:
-#     #     col1 = df1
-#     #     col2 = col1
-#     # else:
-#     #     col1 = df1
-#     #     col2 = df2
-#     # #  si period == 0 c'est l'autocorrélation des valeurs
-#     # #  et non des variations qui est calculée
-#     startval = period + lag * period
-#     if period == 0:
-#         data1 = col1
-#         data2 = col2.shift(periods=lag)
-#     else:
-#         if inpct:
-#             data1 = col1.pct_change(period)[startval:]
-#             data2 = col2.pct_change(period).shift(periods=lag * period)[startval:]
-#         else:
-#             data1 = col1.diff(period)[startval:]
-#             data2 = col2.diff(period).shift(periods=lag * period)[startval:]
-#     if exponential:
-#         corrdata = pd.ewmcorr(data1[startval:], data2[startval:], span=span)
-#     else:
-#         corrdata = pd.rolling_corr(data1, data2, window=span)
-#
-#     corrdata = corrdata.dropna()
-#     # new_df['CORR'] = corrdata
-#     new_df = corrdata
-#     new_df.columns = ['CORR']
-#
-#     # print(new_df)
-#     return new_df
 
 
 def apply_vol(df,
@@ -1412,7 +1440,7 @@ def apply_roll_shift(dates, roll_dict):
     return rolldates
 
 
-def fill_missing_values(idxmain, idxsubst, dfsubst=None):
+def fill_missing_values(df0, df1, idxmain, idxsubst, dfsubst=None):
     """
     This function fills the missing values ​​of the idxmain column with the idxsubst column
     Parameters
@@ -1431,13 +1459,13 @@ def fill_missing_values(idxmain, idxsubst, dfsubst=None):
     new_df : The output dataframe
 
        """
-    df = pd.concat([idxmain, idxsubst], axis=1)
+    df = pd.concat([df0, df1], axis=1)
     if dfsubst is None:
         df2 = df
     else:
         df2 = dfsubst
     try:
-        maincol = get_columns(idxmain)[0]
+        maincol = get_columns(df, idxmain)[0]
         substcol = get_columns(df2)[0]
         if dfsubst is not None:
             df[substcol] = df2[substcol]
@@ -1490,14 +1518,14 @@ def auto_categorize(df, mod=10, level_date=None, date_end=None, min_r=0.02):
        """
     df_copy = df.copy()
     if date_end is not None:
-        if ds_copy.index.nlevels == 1:
-            ds_copy = ds_copy.loc[:date_end]
+        if df_copy.index.nlevels == 1:
+            df_copy = df_copy.loc[:date_end]
         # cas d'un multi index
-        elif ds_copy.index.nlevels == 2:
-            ds_copy = ds_copy.loc[ds_copy.index.get_level_values(level_date) <= date_end]
-            ds_copy = ds_copy.stack()
+        elif df_copy.index.nlevels == 2:
+            df_copy = df_copy.loc[df_copy.index.get_level_values(level_date) <= date_end]
+            df_copy = df_copy.stack()
 
-    df_q = [ds_copy.quantile(q=i / float(mod)) for i in range(0, int(mod) + 1, 1)]
+    df_q = [df_copy.quantile(q=i / float(mod)) for i in range(0, int(mod) + 1, 1)]
     df_q = pd.DataFrame(df_q)
     bins = list(np.unique(df_q.dropna(how='all')))
 
@@ -1827,4 +1855,19 @@ def apply_filter(df, period=1, min_value=np.NINF, max_value=np.inf, diff_order=1
                           data=delta_data.values,
                           columns=cols)
 
+    return new_df
+
+
+def exclude_interval(df, dstart, dend, fmt='%d/%m/%Y'):
+    if len(df.index) == 0:
+        return df
+    if type(dstart) == str:
+        dstart = datetime.strptime(dstart, fmt)
+    if type(dend) == str:
+        dend = datetime.strptime(dend, fmt)
+    try:
+        datestokeep = df.index.map(lambda (x): (x < dstart) or (x > dend))
+        new_df = pd.DataFrame(df[datestokeep])
+    except Exception as e:
+        new_df = df
     return new_df
