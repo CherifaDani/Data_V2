@@ -8,7 +8,6 @@ def retrieve_vars():
         and saves it to a csv file
 
     """
-
     xls = pd.ExcelFile(from_xls, on_demand=True)
     sheets = xls.sheet_names
     print(sheets)
@@ -22,7 +21,6 @@ def retrieve_vars():
     for sheet in e:
         dfs = xls.parse(sheet)
         var_name = dfs['SQL_Name'].values
-        cols = ['var_name', 'var_type']
         list1 = []  # list of variable names
         list2 = []  # type of the variables
         for x in var_name:
@@ -35,7 +33,6 @@ def retrieve_vars():
         df = pd.concat([df1, df2], axis=1)
         dfx = pd.concat([dfx, df])
     dfx = dfx.dropna(how='any')
-
     print(dfx.shape)
     dfx.to_csv(to_csv, index=False)
 
