@@ -6,11 +6,9 @@ def retrieve_vars():
     """
         This script retrieves all variables with their types
         and saves it to a csv file
-
     """
     xls = pd.ExcelFile(from_xls, on_demand=True)
     sheets = xls.sheet_names
-    print(sheets)
     dfx = pd.DataFrame()
     e = []
     for x in sheets:
